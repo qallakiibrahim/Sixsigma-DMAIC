@@ -70,7 +70,7 @@ interface ControlLimitResult {
   n?: number;
 }
 
-export function ControlLimitsCalculator({ toolId: passedToolId, phase = 5 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function ControlLimitsCalculator({ toolId: passedToolId, toolName: passedToolName, phase = 5 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [chartType, setChartType] = useState<ChartType>("imr");
   const [values, setValues] = useState("");
   const [defects, setDefects] = useState("");
@@ -79,6 +79,7 @@ export function ControlLimitsCalculator({ toolId: passedToolId, phase = 5 }: { t
   const [result, setResult] = useState<ControlLimitResult | null>(null);
 
   const effectiveToolId = passedToolId || `spc-${chartType}`;
+  const effectiveToolName = passedToolName || `Styrgränser (${CHART_CONFIGS[chartType].label})`;
 
   const handleLoad = useCallback((inputs: Record<string, unknown>) => {
     if (inputs.chartType) setChartType(inputs.chartType as ChartType);
@@ -186,8 +187,8 @@ export function ControlLimitsCalculator({ toolId: passedToolId, phase = 5 }: { t
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: `spc-${chartType}`,
-      toolName: `Styrgränser (${CHART_CONFIGS[chartType].label})`,
+      toolId: effectiveToolId,
+      toolName: effectiveToolName,
       phase,
       inputs: { 
         chartType,

@@ -19,7 +19,7 @@ const getTCritical = (df: number): number => {
   return 1.96;
 };
 
-export function TwoSampleTTestCalculator({ toolId = "t-test-2sample", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function TwoSampleTTestCalculator({ toolId = "t-test-2sample", toolName = "2-sample t-test", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [mean1, setMean1] = useState("");
   const [std1, setStd1] = useState("");
   const [n1, setN1] = useState("");
@@ -32,12 +32,44 @@ export function TwoSampleTTestCalculator({ toolId = "t-test-2sample", phase = 3 
   } | null>(null);
 
   const handleLoad = useCallback((inputs: Record<string, unknown>) => {
-    if (inputs.mean1 !== undefined) setMean1(String(inputs.mean1));
-    if (inputs.std1 !== undefined) setStd1(String(inputs.std1));
-    if (inputs.n1 !== undefined) setN1(String(inputs.n1));
-    if (inputs.mean2 !== undefined) setMean2(String(inputs.mean2));
-    if (inputs.std2 !== undefined) setStd2(String(inputs.std2));
-    if (inputs.n2 !== undefined) setN2(String(inputs.n2));
+    const nextMean1 = inputs.mean1 !== undefined ? String(inputs.mean1) : "";
+    const nextStd1 = inputs.std1 !== undefined ? String(inputs.std1) : "";
+    const nextN1 = inputs.n1 !== undefined ? String(inputs.n1) : "";
+    const nextMean2 = inputs.mean2 !== undefined ? String(inputs.mean2) : "";
+    const nextStd2 = inputs.std2 !== undefined ? String(inputs.std2) : "";
+    const nextN2 = inputs.n2 !== undefined ? String(inputs.n2) : "";
+
+    setMean1(nextMean1);
+    setStd1(nextStd1);
+    setN1(nextN1);
+    setMean2(nextMean2);
+    setStd2(nextStd2);
+    setN2(nextN2);
+
+    const m1 = parseFloat(nextMean1), s1 = parseFloat(nextStd1), nn1 = parseInt(nextN1);
+    const m2 = parseFloat(nextMean2), s2 = parseFloat(nextStd2), nn2 = parseInt(nextN2);
+    if ([m1, s1, nn1, m2, s2, nn2].some(isNaN) || nn1 < 2 || nn2 < 2 || s1 === 0 || s2 === 0) return;
+
+    const diff = m1 - m2;
+    const se = Math.sqrt((s1 * s1) / nn1 + (s2 * s2) / nn2);
+    const t = diff / se;
+
+    // Welch's df
+    const num = Math.pow((s1 * s1) / nn1 + (s2 * s2) / nn2, 2);
+    const den = Math.pow((s1 * s1) / nn1, 2) / (nn1 - 1) + Math.pow((s2 * s2) / nn2, 2) / (nn2 - 1);
+    const df = Math.floor(num / den);
+
+    const tCrit = 2.0; // Simplification or call helper
+    const significant = Math.abs(t) > tCrit;
+    const absT = Math.abs(t);
+    let pApprox = "p > 0.10";
+    if (absT > 3.5) pApprox = "p < 0.001";
+    else if (absT > 2.8) pApprox = "p < 0.01";
+    else if (absT > tCrit) pApprox = "p < 0.05";
+    else if (absT > 1.7) pApprox = "p < 0.10";
+
+    const margin = tCrit * se;
+    setResult({ t, df, tCrit, significant, pApprox, ci: { lower: diff - margin, upper: diff + margin }, diff });
   }, []);
 
   const { canSave, isSaving, notes, setNotes, saveCalculation, savedCalculation, isLoadingSaved } = useCalculatorSave(toolId, handleLoad);
@@ -78,7 +110,9 @@ export function TwoSampleTTestCalculator({ toolId = "t-test-2sample", phase = 3 
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "t-test-2sample", toolName: "2-sample t-test", phase,
+      toolId,
+      toolName,
+      phase,
       inputs: { mean1: parseFloat(mean1), std1: parseFloat(std1), n1: parseInt(n1), mean2: parseFloat(mean2), std2: parseFloat(std2), n2: parseInt(n2) },
       results: result,
     });

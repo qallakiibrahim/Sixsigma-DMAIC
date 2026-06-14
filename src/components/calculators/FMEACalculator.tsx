@@ -40,7 +40,7 @@ const DETECTION_GUIDE = [
   { range: "1-3", desc: "Hög sannolikhet att upptäcka" },
 ];
 
-export function FMEACalculator({ toolId = "fmea", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function FMEACalculator({ toolId = "fmea", toolName = "FMEA Riskanalys", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [severity, setSeverity] = useState("");
   const [occurrence, setOccurrence] = useState("");
   const [detection, setDetection] = useState("");
@@ -94,8 +94,8 @@ export function FMEACalculator({ toolId = "fmea", phase = 3 }: { toolId?: string
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "fmea",
-      toolName: "FMEA Riskanalys",
+      toolId,
+      toolName,
       phase,
       inputs: { 
         failureMode,

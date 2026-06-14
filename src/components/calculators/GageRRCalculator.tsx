@@ -56,7 +56,7 @@ interface GageRRResult {
   verdict: string;
 }
 
-export function GageRRCalculator({ toolId = "gage-rr", phase = 2 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function GageRRCalculator({ toolId = "gage-rr", toolName = "Gage R&R", phase = 2 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [operators, setOperators] = useState("");
   const [parts, setParts] = useState("");
   const [trials, setTrials] = useState("");
@@ -64,9 +64,33 @@ export function GageRRCalculator({ toolId = "gage-rr", phase = 2 }: { toolId?: s
   const [result, setResult] = useState<GageRRResult | null>(null);
 
   const handleLoad = useCallback((inputs: Record<string, unknown>) => {
-    if (inputs.operators !== undefined) setOperators(String(inputs.operators));
-    if (inputs.parts !== undefined) setParts(String(inputs.parts));
-    if (inputs.trials !== undefined) setTrials(String(inputs.trials));
+    const nextOperators = inputs.operators !== undefined ? String(inputs.operators) : "";
+    const nextParts = inputs.parts !== undefined ? String(inputs.parts) : "";
+    const nextTrials = inputs.trials !== undefined ? String(inputs.trials) : "";
+    const nextData = inputs.data !== undefined ? String(inputs.data) : "";
+
+    setOperators(nextOperators);
+    setParts(nextParts);
+    setTrials(nextTrials);
+    setData(nextData);
+
+    const nOps = parseInt(nextOperators);
+    const nParts = parseInt(nextParts);
+    const nTrials = parseInt(nextTrials);
+
+    if (isNaN(nOps) || isNaN(nParts) || isNaN(nTrials) || nOps < 2 || nParts < 2 || nTrials < 2) return;
+
+    const rows = nextData.trim().split("\n").filter(r => r.trim());
+    const values = rows.map(r => r.split(/[,;\s\t]+/).map(Number).filter(v => !isNaN(v)));
+
+    const expectedRows = nOps * nParts;
+    if (values.length < expectedRows) return;
+
+    // A simple trigger to run calculations with loaded values
+    setTimeout(() => {
+      const btn = document.querySelector('button[onClick*="calculate"]') as HTMLButtonElement | null;
+      if (btn) btn.click();
+    }, 50);
   }, []);
 
   const { canSave, isSaving, notes, setNotes, saveCalculation, savedCalculation, isLoadingSaved } = useCalculatorSave(toolId, handleLoad);
@@ -185,10 +209,10 @@ export function GageRRCalculator({ toolId = "gage-rr", phase = 2 }: { toolId?: s
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "gage-rr",
-      toolName: "Gage R&R",
+      toolId,
+      toolName,
       phase,
-      inputs: { operators: parseInt(operators), parts: parseInt(parts), trials: parseInt(trials) },
+      inputs: { operators: parseInt(operators), parts: parseInt(parts), trials: parseInt(trials), data },
       results: { ...result } as Record<string, unknown>,
     });
   };

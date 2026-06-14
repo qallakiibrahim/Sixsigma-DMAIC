@@ -33,7 +33,7 @@ const DEFAULT_FACTORS: Factor[] = [
   { name: "Tid", lowLevel: "5 min", highLevel: "10 min" },
 ];
 
-export function DOECalculator({ toolId = "doe-basics", phase = 4 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function DOECalculator({ toolId = "doe-basics", toolName = "DOE Experimentplanering", phase = 4 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [factors, setFactors] = useState<Factor[]>([
     { name: "", lowLevel: "", highLevel: "" },
     { name: "", lowLevel: "", highLevel: "" },
@@ -99,8 +99,8 @@ export function DOECalculator({ toolId = "doe-basics", phase = 4 }: { toolId?: s
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "doe-basics",
-      toolName: "DOE Experimentplanering",
+      toolId,
+      toolName,
       phase,
       inputs: { 
         factors: factors.filter(f => f.name.trim()),

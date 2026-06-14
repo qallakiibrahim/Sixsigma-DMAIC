@@ -14,16 +14,40 @@ const EXAMPLES = {
   assembly: { defects: "8", units: "2000", opportunities: "3", label: "Montering" },
 };
 
-export function DPMOCalculator({ toolId = "dpmo", phase = 2 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function DPMOCalculator({ toolId = "dpmo", toolName = "DPMO & Sigma-nivå", phase = 2 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [defects, setDefects] = useState("");
   const [units, setUnits] = useState("");
   const [opportunities, setOpportunities] = useState("");
   const [result, setResult] = useState<{ dpmo: number; sigma: number; yield: number; dpu: number } | null>(null);
 
   const handleLoad = useCallback((inputs: Record<string, unknown>) => {
-    if (inputs.defects !== undefined) setDefects(String(inputs.defects));
-    if (inputs.units !== undefined) setUnits(String(inputs.units));
-    if (inputs.opportunities !== undefined) setOpportunities(String(inputs.opportunities));
+    const nextDefects = inputs.defects !== undefined ? String(inputs.defects) : "";
+    const nextUnits = inputs.units !== undefined ? String(inputs.units) : "";
+    const nextOpportunities = inputs.opportunities !== undefined ? String(inputs.opportunities) : "";
+
+    setDefects(nextDefects);
+    setUnits(nextUnits);
+    setOpportunities(nextOpportunities);
+
+    const d = parseFloat(nextDefects);
+    const u = parseFloat(nextUnits);
+    const o = parseFloat(nextOpportunities);
+
+    if (!isNaN(d) && !isNaN(u) && !isNaN(o) && u !== 0 && o !== 0) {
+      const dpmo = (d / (u * o)) * 1000000;
+      const dpu = d / u;
+      
+      let sigma = 0;
+      for (let i = sigmaTable.length - 1; i >= 0; i--) {
+        if (dpmo <= sigmaTable[i].dpmo) {
+          sigma = sigmaTable[i].sigma;
+          break;
+        }
+      }
+
+      const actualYield = (1 - d / (u * o)) * 100;
+      setResult({ dpmo: Math.round(dpmo), sigma, yield: actualYield, dpu });
+    }
   }, []);
 
   const { canSave, isSaving, notes, setNotes, saveCalculation, savedCalculation, isLoadingSaved } = useCalculatorSave(toolId, handleLoad);
@@ -62,8 +86,8 @@ export function DPMOCalculator({ toolId = "dpmo", phase = 2 }: { toolId?: string
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "dpmo",
-      toolName: "DPMO & Sigma-nivå",
+      toolId,
+      toolName,
       phase,
       inputs: { defects: parseFloat(defects), units: parseFloat(units), opportunities: parseFloat(opportunities) },
       results: result,

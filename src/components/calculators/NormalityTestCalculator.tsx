@@ -13,7 +13,7 @@ const getADCritical = (n: number): number => {
   return 0.752; // Standard critical value
 };
 
-export function NormalityTestCalculator({ toolId = "normality-test", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function NormalityTestCalculator({ toolId = "normality-test", toolName = "Normalitetstest (Anderson-Darling)", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [data, setData] = useState("");
   const [result, setResult] = useState<{
     n: number; mean: number; stdDev: number; skewness: number; kurtosis: number;
@@ -88,7 +88,7 @@ export function NormalityTestCalculator({ toolId = "normality-test", phase = 3 }
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "normality-test", toolName: "Normalitetstest (Anderson-Darling)", phase,
+      toolId, toolName, phase,
       inputs: { n: result.n },
       results: { AD: result.adStatistic, isNormal: result.isNormal, skewness: result.skewness, kurtosis: result.kurtosis },
     });

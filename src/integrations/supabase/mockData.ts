@@ -283,6 +283,50 @@ export function getDemoCalculations(): ProjectCalculation[] {
       created_at: "2026-05-23T16:20:00Z"
     },
     {
+      id: "calc-5-1",
+      project_id: "demo-project-1",
+      user_id: "local-sandbox-user",
+      phase: 2,
+      tool_id: "capability-cp",
+      tool_name: "Processduglighet (Cp)",
+      inputs: {
+        usl: 10.5,
+        lsl: 9.5,
+        mean: 10.02,
+        stdDev: 0.12
+      },
+      results: {
+        cp: 1.389,
+        cpu: 1.333,
+        cpl: 1.444,
+        cpk: 1.333
+      },
+      notes: "Cp mättes till 1.389, vilket indikerar en duglig process med god potentiell kapabilitet.",
+      created_at: "2026-05-24T14:45:00Z"
+    },
+    {
+      id: "calc-5-2",
+      project_id: "demo-project-1",
+      user_id: "local-sandbox-user",
+      phase: 2,
+      tool_id: "capability-cpk",
+      tool_name: "Processduglighet (Cpk)",
+      inputs: {
+        usl: 10.5,
+        lsl: 9.5,
+        mean: 10.08,
+        stdDev: 0.14
+      },
+      results: {
+        cp: 1.190,
+        cpu: 1.000,
+        cpl: 1.381,
+        cpk: 1.000
+      },
+      notes: "Cpk är 1.000 vilket indikerar att centringen kan förbättras (medelvärdet ligger något för skevt mot övre toleransgränsen USL).",
+      created_at: "2026-05-25T10:15:00Z"
+    },
+    {
       id: "calc-6",
       project_id: "demo-project-1",
       user_id: "local-sandbox-user",

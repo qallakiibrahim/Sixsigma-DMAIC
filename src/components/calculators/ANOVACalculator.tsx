@@ -16,7 +16,7 @@ const getFCritical = (df1: number, df2: number): number => {
   return df2 < 10 ? 3.48 : df2 < 20 ? 2.71 : df2 < 40 ? 2.45 : 2.21;
 };
 
-export function ANOVACalculator({ toolId = "anova", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function ANOVACalculator({ toolId = "anova", toolName = "ANOVA", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [groupData, setGroupData] = useState("");
   const [result, setResult] = useState<{
     groups: number; totalN: number; grandMean: number;
@@ -73,7 +73,7 @@ export function ANOVACalculator({ toolId = "anova", phase = 3 }: { toolId?: stri
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "anova", toolName: "ANOVA", phase,
+      toolId, toolName, phase,
       inputs: { groupData },
       results: { F: result.F, FCrit: result.FCrit, significant: result.significant, groups: result.groups, dfB: result.dfB, dfW: result.dfW },
     });

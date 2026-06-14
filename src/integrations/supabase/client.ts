@@ -178,6 +178,41 @@ class MockQueryBuilder {
       for (const cond of this.inConditions) {
         filtered = filtered.filter(item => cond.values.includes(item[cond.field]));
       }
+
+      // Check if we should auto-seed template/demo data for an empty project
+      const projectIdCond = this.conditions.find(c => c.field === 'project_id');
+      const projectId = projectIdCond ? projectIdCond.value : null;
+      const seedableTables = ['project_notes', 'project_calculations', 'control_plans', 'raci_matrix', 'sigma_tracking'];
+      
+      if (projectId && filtered.length === 0 && seedableTables.includes(this.tableName)) {
+        let templateItems: any[] = [];
+        if (this.tableName === 'project_notes') {
+          templateItems = getDemoNotes();
+        } else if (this.tableName === 'project_calculations') {
+          templateItems = getDemoCalculations();
+        } else if (this.tableName === 'control_plans') {
+          templateItems = getDemoControlPlans();
+        } else if (this.tableName === 'raci_matrix') {
+          templateItems = getDemoRaciMatrix();
+        } else if (this.tableName === 'sigma_tracking') {
+          templateItems = getDemoSigmaTracking();
+        }
+
+        if (templateItems.length > 0) {
+          const cloned = templateItems.map((item, index) => ({
+            ...item,
+            id: `${this.tableName}-seeded-${projectId.substring(0, 8)}-${index}`,
+            project_id: projectId,
+            user_id: "local-sandbox-user",
+            created_at: new Date(Date.now() - (templateItems.length - index) * 3600 * 1000).toISOString()
+          }));
+
+          items = [...items, ...cloned];
+          localStorage.setItem(dbKey, JSON.stringify(items));
+          filtered = cloned;
+        }
+      }
+
       // Apply sort order
       if (this.orderField) {
         const field = this.orderField;
@@ -564,7 +599,50 @@ class FirestoreQueryBuilder {
 
         const q = query(colRef, ...qConstraints);
         const snap = await getDocs(q);
-        const docs = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+        let docs = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+
+        // Check if we should auto-seed template/demo data for an empty project in Firestore
+        const projectIdCond = this.conditions.find(c => c.field === 'project_id');
+        const projectId = projectIdCond ? projectIdCond.value : null;
+        const seedableTables = ['project_notes', 'project_calculations', 'control_plans', 'raci_matrix', 'sigma_tracking'];
+        
+        if (projectId && docs.length === 0 && seedableTables.includes(this.tableName)) {
+          let templateItems: any[] = [];
+          if (this.tableName === 'project_notes') {
+            templateItems = getDemoNotes();
+          } else if (this.tableName === 'project_calculations') {
+            templateItems = getDemoCalculations();
+          } else if (this.tableName === 'control_plans') {
+            templateItems = getDemoControlPlans();
+          } else if (this.tableName === 'raci_matrix') {
+            templateItems = getDemoRaciMatrix();
+          } else if (this.tableName === 'sigma_tracking') {
+            templateItems = getDemoSigmaTracking();
+          }
+
+          if (templateItems.length > 0) {
+            const currentUser = auth.currentUser;
+            const userId = currentUser ? currentUser.uid : "local-sandbox-user";
+            const clonedDocs: any[] = [];
+            
+            for (let i = 0; i < templateItems.length; i++) {
+              const item = templateItems[i];
+              const docId = `${this.tableName}-seeded-${projectId.substring(0, 8)}-${i}`;
+              const docRef = doc(db, this.tableName, docId);
+              const payload = {
+                ...item,
+                id: docId,
+                project_id: projectId,
+                user_id: userId,
+                created_at: new Date(Date.now() - (templateItems.length - i) * 3600 * 1000).toISOString()
+              };
+              await setDoc(docRef, payload);
+              clonedDocs.push(payload);
+            }
+            docs = clonedDocs;
+          }
+        }
+
         return { data: this.isSingle ? (docs[0] || null) : docs, error: null };
 
       } else if (this.operation === 'insert') {

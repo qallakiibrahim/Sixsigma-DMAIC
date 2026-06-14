@@ -21,7 +21,7 @@ const getChi2Critical = (df: number): number => {
   return df + Math.sqrt(2 * df); // rough approximation
 };
 
-export function ChiSquareCalculator({ toolId = "chi-square", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function ChiSquareCalculator({ toolId = "chi-square", toolName = "Chi-två-test", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [tableData, setTableData] = useState("");
   const [result, setResult] = useState<{
     chi2: number; df: number; chi2Crit: number; significant: boolean;
@@ -80,7 +80,9 @@ export function ChiSquareCalculator({ toolId = "chi-square", phase = 3 }: { tool
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "chi-square", toolName: "Chi-två-test", phase,
+      toolId,
+      toolName,
+      phase,
       inputs: { tableData },
       results: { chi2: result.chi2, df: result.df, significant: result.significant },
     });

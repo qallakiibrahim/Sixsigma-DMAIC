@@ -28,7 +28,7 @@ interface CorrelationResult {
   n: number;
 }
 
-export function CorrelationCalculator({ toolId = "correlation", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function CorrelationCalculator({ toolId = "correlation", toolName = "Korrelationsanalys", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [xValues, setXValues] = useState("");
   const [yValues, setYValues] = useState("");
   const [result, setResult] = useState<CorrelationResult | null>(null);
@@ -91,8 +91,8 @@ export function CorrelationCalculator({ toolId = "correlation", phase = 3 }: { t
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "correlation",
-      toolName: "Korrelationsanalys",
+      toolId,
+      toolName,
       phase,
       inputs: { 
         xValues: xValues.split(",").map(v => parseFloat(v.trim())).filter(v => !isNaN(v)),

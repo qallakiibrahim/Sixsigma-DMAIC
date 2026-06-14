@@ -33,7 +33,7 @@ const EXAMPLES = {
   process: { mean: "25.3", target: "25.0", std: "1.2", n: "15", label: "Processmätning" },
 };
 
-export function TTestCalculator({ toolId = "t-test-1sample", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function TTestCalculator({ toolId = "t-test-1sample", toolName = "1-sample t-test", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [sampleMean, setSampleMean] = useState("");
   const [targetMean, setTargetMean] = useState("");
   const [stdDev, setStdDev] = useState("");
@@ -97,8 +97,8 @@ export function TTestCalculator({ toolId = "t-test-1sample", phase = 3 }: { tool
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "t-test-1sample",
-      toolName: "1-sample t-test",
+      toolId,
+      toolName,
       phase,
       inputs: { 
         sampleMean: parseFloat(sampleMean),

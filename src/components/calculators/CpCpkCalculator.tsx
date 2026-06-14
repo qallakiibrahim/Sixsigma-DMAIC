@@ -14,7 +14,7 @@ const EXAMPLE_DATA = {
   stdDev: "0.12",
 };
 
-export function CpCpkCalculator({ toolId = "capability-cpk", phase = 2 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function CpCpkCalculator({ toolId = "capability-cpk", toolName = "Processduglighet (Cp/Cpk)", phase = 2 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [usl, setUsl] = useState("");
   const [lsl, setLsl] = useState("");
   const [mean, setMean] = useState("");
@@ -22,10 +22,28 @@ export function CpCpkCalculator({ toolId = "capability-cpk", phase = 2 }: { tool
   const [result, setResult] = useState<{ cp: number; cpk: number; cpu: number; cpl: number } | null>(null);
 
   const handleLoad = useCallback((inputs: Record<string, unknown>) => {
-    if (inputs.usl !== undefined) setUsl(String(inputs.usl));
-    if (inputs.lsl !== undefined) setLsl(String(inputs.lsl));
-    if (inputs.mean !== undefined) setMean(String(inputs.mean));
-    if (inputs.stdDev !== undefined) setStdDev(String(inputs.stdDev));
+    const nextUsl = inputs.usl !== undefined ? String(inputs.usl) : "";
+    const nextLsl = inputs.lsl !== undefined ? String(inputs.lsl) : "";
+    const nextMean = inputs.mean !== undefined ? String(inputs.mean) : "";
+    const nextStdDev = inputs.stdDev !== undefined ? String(inputs.stdDev) : "";
+
+    setUsl(nextUsl);
+    setLsl(nextLsl);
+    setMean(nextMean);
+    setStdDev(nextStdDev);
+
+    const USL = parseFloat(nextUsl);
+    const LSL = parseFloat(nextLsl);
+    const μ = parseFloat(nextMean);
+    const σ = parseFloat(nextStdDev);
+
+    if (!isNaN(USL) && !isNaN(LSL) && !isNaN(μ) && !isNaN(σ) && σ !== 0) {
+      const cp = (USL - LSL) / (6 * σ);
+      const cpu = (USL - μ) / (3 * σ);
+      const cpl = (μ - LSL) / (3 * σ);
+      const cpk = Math.min(cpu, cpl);
+      setResult({ cp, cpk, cpu, cpl });
+    }
   }, []);
 
   const { canSave, isSaving, notes, setNotes, saveCalculation, savedCalculation, isLoadingSaved } = useCalculatorSave(toolId, handleLoad);
@@ -57,8 +75,8 @@ export function CpCpkCalculator({ toolId = "capability-cpk", phase = 2 }: { tool
   const handleSave = () => {
     if (!result) return;
     saveCalculation({
-      toolId: "capability-cpk",
-      toolName: "Processduglighet (Cp/Cpk)",
+      toolId,
+      toolName,
       phase,
       inputs: { usl: parseFloat(usl), lsl: parseFloat(lsl), mean: parseFloat(mean), stdDev: parseFloat(stdDev) },
       results: result,

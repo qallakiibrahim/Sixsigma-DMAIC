@@ -97,7 +97,7 @@ const DEFAULT_USL = "10.50";
 const DEFAULT_TARGET = "10.00";
 const DEFAULT_DATA = "10.02, 10.15, 9.88, 9.95, 10.11, 10.08, 9.94, 10.02, 10.23, 9.78, \n10.12, 10.01, 10.18, 9.91, 9.85, 10.14, 10.02, 10.09, 9.97, 10.21, \n10.03, 9.96, 10.10, 10.05, 10.11, 9.82, 10.24, 10.01, 9.89, 10.13";
 
-export function CapabilitySixpack({ toolId = "capability-sixpack", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
+export function CapabilitySixpack({ toolId = "capability-sixpack", toolName = "Capability Sixpack", phase = 3 }: { toolId?: string; toolName?: string; phase?: number }) {
   const [dataStr, setDataStr] = useState(DEFAULT_DATA);
   const [lslStr, setLslStr] = useState(DEFAULT_LSL);
   const [uslStr, setUslStr] = useState(DEFAULT_USL);
@@ -388,9 +388,9 @@ export function CapabilitySixpack({ toolId = "capability-sixpack", phase = 3 }: 
   const handleSave = () => {
     if (!analysis) return;
     saveCalculation({
-      toolId: "capability-sixpack",
-      toolName: "Capability Sixpack",
-      phase, // Analyze
+      toolId,
+      toolName,
+      phase,
       inputs: {
         dataStr,
         lslStr,
