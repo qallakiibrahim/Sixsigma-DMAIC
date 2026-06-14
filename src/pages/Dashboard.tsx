@@ -156,8 +156,8 @@ export default function Dashboard() {
   };
 
   // Derived stats
-  const activeProjects = projects.filter(p => p.status === "active");
-  const completedProjects = projects.filter(p => p.status === "completed");
+  const activeProjects = projects.filter(p => !p.status || p.status.toLowerCase() === "active");
+  const completedProjects = projects.filter(p => p.status?.toLowerCase() === "completed");
   const stagnantProjects = activeProjects.filter(p => daysSince(p.updated_at) > 14);
   const totalEstimatedSavings = projects.reduce((sum, p) => sum + (p.estimated_savings || 0), 0);
   const totalActualSavings = projects.reduce((sum, p) => sum + (p.actual_savings || 0), 0);
@@ -172,8 +172,11 @@ export default function Dashboard() {
   const filteredProjects = projects.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-    const matchesPhase = phaseFilter === "all" || p.current_phase === phaseFilter;
+    const projectStatus = p.status || "active";
+    const matchesStatus = statusFilter === "all" || projectStatus.toLowerCase() === statusFilter.toLowerCase();
+    
+    const projectPhase = p.current_phase || 1;
+    const matchesPhase = phaseFilter === "all" || projectPhase === phaseFilter;
     return matchesSearch && matchesStatus && matchesPhase;
   });
 
@@ -181,7 +184,7 @@ export default function Dashboard() {
   const phaseDistData = phases.map(phase => ({
     name: phase.name,
     icon: phase.icon,
-    count: activeProjects.filter(p => p.current_phase === phase.id).length,
+    count: activeProjects.filter(p => (p.current_phase || 1) === phase.id).length,
   }));
 
   // Sigma trend (all projects combined, chronological)
@@ -671,17 +674,19 @@ export default function Dashboard() {
               ) : viewMode === "card" ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredProjects.map(project => {
-                    const phaseData = phases.find(p => p.id === project.current_phase) || phases[0];
+                    const activePhaseNum = project.current_phase || 1;
+                    const phaseData = phases.find(p => p.id === activePhaseNum) || phases[0];
                     const tp = tollgateProgress[project.id];
                     const tollgatePercent = tp ? Math.round((tp.completed / tp.total) * 100) : 0;
                     const projectSigma = sigmaData.filter(s => s.project_id === project.id);
                     const latestSigma = projectSigma.length > 0 ? Number(projectSigma[projectSigma.length - 1].sigma_level) : null;
                     const firstSigma = projectSigma.length > 0 ? Number(projectSigma[0].sigma_level) : null;
                     const tools = toolsUsed[project.id] || [];
-                    const expectedCount = expectedToolsPerPhase[project.current_phase] || 10;
+                    const expectedCount = expectedToolsPerPhase[activePhaseNum] || 10;
                     const toolMaturityPercent = Math.min(100, Math.round((tools.length / expectedCount) * 100));
                     const days = daysSince(project.updated_at);
-                    const isStagnant = project.status === "active" && days > 14;
+                    const isCompleted = project.status?.toLowerCase() === "completed";
+                    const isStagnant = !isCompleted && days > 14;
 
                     // Compute dynamic left border color depending on current active phase
                     const phaseBorderStyles: Record<number, string> = {
@@ -695,7 +700,7 @@ export default function Dashboard() {
                     return (
                       <Link to={`/project/${project.id}`} key={project.id} className="block block-link group">
                         <Card className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 hover:shadow-md transition-all h-full cursor-pointer relative overflow-hidden ${
-                          phaseBorderStyles[project.current_phase] || "border-l-[5px] border-l-blue-500"
+                          phaseBorderStyles[activePhaseNum] || "border-l-[5px] border-l-blue-500"
                         } hover:-translate-y-0.5 duration-200`}>
                           
                           <CardHeader className="pb-3 pt-4 px-4">
@@ -716,8 +721,8 @@ export default function Dashboard() {
                                 {isStagnant && (
                                   <span className="h-2 w-2 rounded-full bg-amber-500 inline-block animate-pulse" title="Stagnerat"></span>
                                 )}
-                                <Badge variant={project.status === "completed" ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0">
-                                  {project.status === "active" ? "Aktiv" : "Klar"}
+                                <Badge variant={isCompleted ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0">
+                                  {isCompleted ? "Klar" : "Aktiv"}
                                 </Badge>
                               </div>
                             </div>
@@ -732,14 +737,14 @@ export default function Dashboard() {
                                   <span>{phaseData.icon}</span>
                                   <span>Fas: {phaseData.name}</span>
                                 </span>
-                                <span className="font-mono text-slate-400 font-bold text-[10px]">{project.current_phase}/5 Metodik</span>
+                                <span className="font-mono text-slate-400 font-bold text-[10px]">{activePhaseNum}/5 Metodik</span>
                               </div>
                               
                               {/* 5 bars indicating completion state */}
                               <div className="flex gap-1">
                                 {phases.map(p => {
                                   let bgClass = "bg-slate-100 dark:bg-slate-800/60";
-                                  if (p.id <= project.current_phase) {
+                                  if (p.id <= activePhaseNum) {
                                     bgClass = p.id === 1 ? "bg-blue-500" 
                                             : p.id === 2 ? "bg-green-500" 
                                             : p.id === 3 ? "bg-amber-500" 
@@ -856,9 +861,11 @@ export default function Dashboard() {
                       <div className="divide-y divide-slate-100 dark:divide-slate-800/70">
                         {filteredProjects.map(project => {
                           const pos = getGanttBarPosition(project);
-                          const phaseData = phases.find(ph => ph.id === project.current_phase) || phases[0];
+                          const activePhaseNum = project.current_phase || 1;
+                          const phaseData = phases.find(ph => ph.id === activePhaseNum) || phases[0];
                           const days = daysSince(project.updated_at);
-                          const isStagnant = project.status === "active" && days > 14;
+                          const isCompleted = project.status?.toLowerCase() === "completed";
+                          const isStagnant = !isCompleted && days > 14;
 
                           return (
                             <Link 
@@ -873,14 +880,14 @@ export default function Dashboard() {
                                   <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 group-hover/row:text-blue-600 dark:group-hover/row:text-blue-400 transition-colors line-clamp-1 pr-1">
                                     {project.name}
                                   </span>
-                                  <Badge variant={project.status === "completed" ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0 shrink-0">
-                                    {project.status === "active" ? "Aktiv" : "Klar"}
+                                  <Badge variant={isCompleted ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0 shrink-0">
+                                    {isCompleted ? "Klar" : "Aktiv"}
                                   </Badge>
                                 </div>
                                 
                                 <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
                                   <span>{phaseData.icon}</span>
-                                  <span className="font-semibold">Fas {project.current_phase}: {phaseData.name}</span>
+                                  <span className="font-semibold">Fas {activePhaseNum}: {phaseData.name}</span>
                                 </div>
                                 
                                 <div className="text-[9px] text-slate-400 dark:text-slate-500 font-mono tracking-tight flex items-center gap-1.5">
@@ -905,7 +912,7 @@ export default function Dashboard() {
                                 {/* Gantt Progressive Row Bar */}
                                 <div 
                                   className={`absolute h-9 rounded-xl flex items-center p-0.5 overflow-hidden transition-all group/gantt hover:scale-[1.01] border ${
-                                    project.status === "completed"
+                                    isCompleted
                                       ? "border-emerald-250/30 bg-emerald-50/10 dark:bg-emerald-950/5 opacity-80"
                                       : "border-slate-200/50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20"
                                   }`}
@@ -914,12 +921,12 @@ export default function Dashboard() {
                                   {/* Draw 5 visual segmented modules inside representing DMAIC */}
                                   <div className="flex w-full h-full gap-0.5">
                                     {[1, 2, 3, 4, 5].map((idx) => {
-                                      const isCurrent = idx === project.current_phase;
-                                      const isPastOrCurrent = idx <= project.current_phase;
+                                      const isCurrent = idx === activePhaseNum;
+                                      const isPastOrCurrent = idx <= activePhaseNum;
                                       
                                       // Elegant muted tones for completed projects, active vivid colors for live ones
                                       let phaseColor = PHASE_COLORS[idx - 1];
-                                      if (project.status === "completed") {
+                                      if (isCompleted) {
                                         phaseColor = "rgba(16, 185, 129, 0.45)"; // Soft classy success emerald green for completed project phases
                                       }
 
@@ -927,7 +934,7 @@ export default function Dashboard() {
                                         <div 
                                           key={idx} 
                                           className={`flex-1 h-full rounded flex items-center justify-center relative transition-all ${
-                                            isCurrent && project.status !== "completed"
+                                            isCurrent && !isCompleted
                                               ? "shadow-[0_1px_4px_rgba(59,130,246,0.3)] saturate-125 z-10 font-bold" 
                                               : ""
                                           }`}
@@ -945,7 +952,7 @@ export default function Dashboard() {
                                           </span>
 
                                           {/* Active blinking dot helper (only for live active projects) */}
-                                          {isCurrent && project.status === "active" && (
+                                          {isCurrent && !isCompleted && (
                                             <span className="absolute -top-0.5 -right-0.5 flex h-1 w-1">
                                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
                                               <span className="relative inline-flex rounded-full h-1 w-1 bg-white"></span>

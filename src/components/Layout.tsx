@@ -205,7 +205,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Mobile Phase Navigation */}
       <div className="md:hidden sticky top-16 z-40 glass border-b overflow-x-auto">
-        <div className="flex items-center gap-1 px-4 py-2">
+        <div className="flex items-center gap-1.5 px-4 py-2">
           <Link
             to="/projects"
             className={cn(
@@ -217,20 +217,65 @@ export function Layout({ children }: LayoutProps) {
           >
             📁 Projekt
           </Link>
-          {phases.map((phase) => (
-            <Link
-              key={phase.id}
-              to={`/phase/${phase.id}`}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-                location.pathname === `/phase/${phase.id}`
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              {phase.icon} {phase.name}
-            </Link>
-          ))}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 focus:outline-none cursor-pointer",
+                  location.pathname.startsWith("/phase/")
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted-foreground/10"
+                )}
+              >
+                <span>🌀 DMAIC-faser</span>
+                <span className="text-[8px] opacity-75">▼</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56 p-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-lg font-sans">
+              {phases.map((phase) => (
+                <DropdownMenuItem key={phase.id} asChild className="focus:bg-slate-50 dark:focus:bg-slate-800/60 rounded-lg cursor-pointer">
+                  <Link
+                    to={`/phase/${phase.id}`}
+                    className={cn(
+                      "flex items-center gap-2.5 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 transition-colors",
+                      location.pathname === `/phase/${phase.id}` ? "bg-primary/20 text-primary dark:text-blue-400 font-bold" : ""
+                    )}
+                  >
+                    <span className="text-base shrink-0">{phase.icon}</span>
+                    <div className="flex flex-col text-left">
+                      <span className="font-semibold text-xs text-slate-800 dark:text-slate-100">{phase.name}</span>
+                      <span className="text-[10px] text-slate-400">Fas {phase.id} av 5</span>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Link
+            to="/calculators"
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+              location.pathname === "/calculators"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            🧮 Kalkylatorer
+          </Link>
+
+          <Link
+            to="/control-charts"
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+              location.pathname === "/control-charts"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            📈 Styrdiagram
+          </Link>
         </div>
       </div>
 
