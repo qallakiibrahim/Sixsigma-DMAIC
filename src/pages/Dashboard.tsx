@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, BarChart3, CheckCircle2, Clock, ArrowRight, FolderOpen,
   TrendingUp, Target, AlertTriangle, DollarSign, Activity, CalendarDays,
-  Search, Filter, ArrowUpRight, Coins
+  Search, Filter, ArrowUpRight, Coins, List, Calendar
 } from "lucide-react";
 import { phases } from "@/data/dmaic-tools";
 import {
@@ -73,6 +73,7 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "completed">("all");
   const [phaseFilter, setPhaseFilter] = useState<number | "all">("all");
+  const [viewMode, setViewMode] = useState<"card" | "gantt">("card");
 
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -219,6 +220,59 @@ export default function Dashboard() {
       );
     }
     return null;
+  };
+
+  const getGanttMonths = () => {
+    if (filteredProjects.length === 0) {
+      const months = [];
+      const current = new Date();
+      for (let i = 0; i < 6; i++) {
+        months.push(new Date(current.getFullYear(), current.getMonth() + i, 1));
+      }
+      return months;
+    }
+
+    const startDates = filteredProjects.map(p => new Date(p.created_at).getTime());
+    const minTime = Math.min(...startDates);
+    const earliestDate = new Date(minTime);
+
+    const timelineStartMon = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
+
+    const months = [];
+    for (let i = 0; i < 6; i++) {
+      months.push(new Date(timelineStartMon.getFullYear(), timelineStartMon.getMonth() + i, 1));
+    }
+    return months;
+  };
+
+  const ganttMonths = getGanttMonths();
+  const timelineStartMs = new Date(ganttMonths[0].getFullYear(), ganttMonths[0].getMonth(), 1).getTime();
+  const lastMonth = ganttMonths[ganttMonths.length - 1];
+  const timelineEndMs = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0).getTime();
+  const totalTimelineRangeMs = Math.max(1, timelineEndMs - timelineStartMs);
+
+  const getGanttBarPosition = (proj: Project) => {
+    const startMs = new Date(proj.created_at).getTime();
+    // Assuming a progressive default standard duration of 16 weeks (112 days)
+    const durationMs = 112 * 24 * 60 * 60 * 1000;
+    let endMs = startMs + durationMs;
+
+    if (proj.status === "completed" && new Date(proj.updated_at).getTime() > startMs) {
+      endMs = new Date(proj.updated_at).getTime();
+    }
+
+    const leftPercent = ((startMs - timelineStartMs) / totalTimelineRangeMs) * 100;
+    const widthPercent = ((endMs - startMs) / totalTimelineRangeMs) * 100;
+
+    const clampedLeft = Math.max(0.5, Math.min(92, leftPercent));
+    const clampedWidth = Math.max(8, Math.min(100 - clampedLeft, widthPercent));
+
+    return {
+      left: `${clampedLeft}%`,
+      width: `${clampedWidth}%`,
+      startDate: new Date(startMs).toLocaleDateString("sv-SE", { month: "short", day: "numeric" }),
+      endDate: new Date(endMs).toLocaleDateString("sv-SE", { month: "short", day: "numeric" }),
+    };
   };
 
   if (loading || isLoading) {
@@ -533,6 +587,34 @@ export default function Dashboard() {
                 
                 {/* Search Inputs and Controls */}
                 <div className="flex items-center gap-3 flex-wrap">
+                  {/* View Mode Switcher Toggle */}
+                  <div className="flex border border-slate-200/85 dark:border-slate-800 rounded-xl p-0.5 bg-slate-50 dark:bg-slate-950/40 h-9 items-center shadow-inner">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("card")}
+                      className={`flex items-center gap-1 px-3 h-full rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                        viewMode === "card"
+                          ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/40 dark:border-slate-800/80"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                      }`}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      <span>Kortvy</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("gantt")}
+                      className={`flex items-center gap-1 px-3 h-full rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                        viewMode === "gantt"
+                          ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/40 dark:border-slate-800/80"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                      }`}
+                    >
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>Gantt-tidslinje</span>
+                    </button>
+                  </div>
+
                   <div className="relative max-w-xs w-full">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <input
@@ -586,7 +668,7 @@ export default function Dashboard() {
                     Återställ filter
                   </Button>
                 </div>
-              ) : (
+              ) : viewMode === "card" ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredProjects.map(project => {
                     const phaseData = phases.find(p => p.id === project.current_phase) || phases[0];
@@ -745,6 +827,144 @@ export default function Dashboard() {
                       </Link>
                     );
                   })}
+                </div>
+              ) : (
+                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden border-t-2 border-t-blue-500/80">
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[900px]">
+                      
+                      {/* Gantt Header */}
+                      <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-[10px] font-bold font-mono tracking-wider text-slate-400 dark:text-slate-505 select-none">
+                        <div className="w-80 shrink-0 p-4 border-r border-slate-100 dark:border-slate-800/70">
+                          PROJEKT & AKTIV FAS
+                        </div>
+                        
+                        {/* Time Columns Header */}
+                        <div className="flex-1 flex relative">
+                          {ganttMonths.map((m, i) => (
+                            <div 
+                              key={i} 
+                              className="flex-1 text-center p-4 border-r border-slate-100 dark:border-slate-800/50 last:border-0"
+                            >
+                              {m.toLocaleDateString("sv-SE", { month: "short", year: "2-digit" }).toUpperCase()}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Gantt Rows */}
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                        {filteredProjects.map(project => {
+                          const pos = getGanttBarPosition(project);
+                          const phaseData = phases.find(ph => ph.id === project.current_phase) || phases[0];
+                          const days = daysSince(project.updated_at);
+                          const isStagnant = project.status === "active" && days > 14;
+
+                          return (
+                            <div key={project.id} className="flex min-h-[90px] items-center hover:bg-slate-50/20 dark:hover:bg-slate-950/5 transition-colors">
+                              
+                              {/* Project info column */}
+                              <div className="w-80 shrink-0 p-4 border-r border-slate-100 dark:border-slate-800/70 flex flex-col justify-center space-y-1.5 overflow-hidden">
+                                <div className="flex items-center gap-1.5 justify-between">
+                                  <Link 
+                                    to={`/project/${project.id}`} 
+                                    className="font-extrabold text-xs text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors line-clamp-1 pr-1"
+                                  >
+                                    {project.name}
+                                  </Link>
+                                  <Badge variant={project.status === "completed" ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0 shrink-0">
+                                    {project.status === "active" ? "Aktiv" : "Klar"}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                                  <span>{phaseData.icon}</span>
+                                  <span className="font-semibold">Fas {project.current_phase}: {phaseData.name}</span>
+                                </div>
+                                
+                                <div className="text-[9px] text-slate-400 dark:text-slate-500 font-mono tracking-tight flex items-center gap-1.5">
+                                  <span>Start: {new Date(project.created_at).toLocaleDateString("sv-SE")}</span>
+                                  <span>•</span>
+                                  <span className={isStagnant ? "text-amber-500 dark:text-amber-400 font-semibold" : ""}>
+                                    {days === 0 ? "Aktiv idag" : `${days} d sedan`}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Timeline Gantt Columns with horizontal progressive bar */}
+                              <div className="flex-1 h-full min-h-[90px] relative flex items-center pr-4">
+                                
+                                {/* Vertical helper grids */}
+                                <div className="absolute inset-0 flex pointer-events-none">
+                                  {ganttMonths.map((_, i) => (
+                                    <div key={i} className="flex-1 border-r border-slate-100/35 dark:border-slate-850/15 last:border-0 h-full" />
+                                  ))}
+                                </div>
+
+                                {/* Gantt Progressive Row Bar */}
+                                <div 
+                                  className="absolute h-9 rounded-xl flex items-center p-0.5 overflow-hidden transition-all group/gantt hover:scale-[1.01] border border-slate-200/50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20"
+                                  style={{ left: pos.left, width: pos.width }}
+                                >
+                                  {/* Draw 5 visual segmented modules inside representing DMAIC */}
+                                  <div className="flex w-full h-full gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((idx) => {
+                                      const phaseColor = PHASE_COLORS[idx - 1];
+                                      const isCurrent = idx === project.current_phase;
+                                      const isCompleted = idx < project.current_phase;
+                                      const isPastOrCurrent = idx <= project.current_phase;
+
+                                      return (
+                                        <div 
+                                          key={idx} 
+                                          className={`flex-1 h-full rounded flex items-center justify-center relative transition-all ${
+                                            isCurrent 
+                                              ? "shadow-[0_1px_4px_rgba(59,130,246,0.3)] saturate-125 z-10 font-bold" 
+                                              : ""
+                                          }`}
+                                          style={{ 
+                                            backgroundColor: isPastOrCurrent ? phaseColor : "transparent"
+                                          }}
+                                        >
+                                          {/* Text indicator */}
+                                          <span className={`text-[9px] font-extrabold select-none ${
+                                            isPastOrCurrent ? "text-white" : "text-slate-300 dark:text-slate-700 font-light"
+                                          }`}>
+                                            {idx === 1 ? "D" : idx === 2 ? "M" : idx === 3 ? "A" : idx === 4 ? "I" : "C"}
+                                          </span>
+
+                                          {/* Active blinking dot helper */}
+                                          {isCurrent && (
+                                            <span className="absolute -top-0.5 -right-0.5 flex h-1 w-1">
+                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
+                                              <span className="relative inline-flex rounded-full h-1 w-1 bg-white"></span>
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Tiny hover timestamp popover */}
+                                  <div className="absolute inset-0 bg-slate-950/90 dark:bg-white/95 text-white dark:text-slate-950 flex items-center justify-center opacity-0 group-hover/gantt:opacity-100 transition-opacity pointer-events-none rounded-lg">
+                                    <div className="text-[10px] font-bold font-mono tracking-wide flex items-center gap-2">
+                                      <span>{pos.startDate}</span>
+                                      <span className="text-blue-500">→</span>
+                                      <span>{pos.endDate} (estimerat slut)</span>
+                                    </div>
+                                  </div>
+
+                                </div>
+
+                              </div>
+
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
