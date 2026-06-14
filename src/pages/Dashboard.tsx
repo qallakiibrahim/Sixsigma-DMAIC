@@ -861,17 +861,18 @@ export default function Dashboard() {
                           const isStagnant = project.status === "active" && days > 14;
 
                           return (
-                            <div key={project.id} className="flex min-h-[90px] items-center hover:bg-slate-50/20 dark:hover:bg-slate-950/5 transition-colors">
+                            <Link 
+                              key={project.id} 
+                              to={`/project/${project.id}`} 
+                              className="flex min-h-[90px] items-center hover:bg-slate-50/40 dark:hover:bg-slate-950/20 transition-all cursor-pointer group/row decoration-none outline-none select-none"
+                            >
                               
                               {/* Project info column */}
                               <div className="w-80 shrink-0 p-4 border-r border-slate-100 dark:border-slate-800/70 flex flex-col justify-center space-y-1.5 overflow-hidden">
                                 <div className="flex items-center gap-1.5 justify-between">
-                                  <Link 
-                                    to={`/project/${project.id}`} 
-                                    className="font-extrabold text-xs text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors line-clamp-1 pr-1"
-                                  >
+                                  <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 group-hover/row:text-blue-600 dark:group-hover/row:text-blue-400 transition-colors line-clamp-1 pr-1">
                                     {project.name}
-                                  </Link>
+                                  </span>
                                   <Badge variant={project.status === "completed" ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0 shrink-0">
                                     {project.status === "active" ? "Aktiv" : "Klar"}
                                   </Badge>
@@ -903,22 +904,30 @@ export default function Dashboard() {
 
                                 {/* Gantt Progressive Row Bar */}
                                 <div 
-                                  className="absolute h-9 rounded-xl flex items-center p-0.5 overflow-hidden transition-all group/gantt hover:scale-[1.01] border border-slate-200/50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20"
+                                  className={`absolute h-9 rounded-xl flex items-center p-0.5 overflow-hidden transition-all group/gantt hover:scale-[1.01] border ${
+                                    project.status === "completed"
+                                      ? "border-emerald-250/30 bg-emerald-50/10 dark:bg-emerald-950/5 opacity-80"
+                                      : "border-slate-200/50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20"
+                                  }`}
                                   style={{ left: pos.left, width: pos.width }}
                                 >
                                   {/* Draw 5 visual segmented modules inside representing DMAIC */}
                                   <div className="flex w-full h-full gap-0.5">
                                     {[1, 2, 3, 4, 5].map((idx) => {
-                                      const phaseColor = PHASE_COLORS[idx - 1];
                                       const isCurrent = idx === project.current_phase;
-                                      const isCompleted = idx < project.current_phase;
                                       const isPastOrCurrent = idx <= project.current_phase;
+                                      
+                                      // Elegant muted tones for completed projects, active vivid colors for live ones
+                                      let phaseColor = PHASE_COLORS[idx - 1];
+                                      if (project.status === "completed") {
+                                        phaseColor = "rgba(16, 185, 129, 0.45)"; // Soft classy success emerald green for completed project phases
+                                      }
 
                                       return (
                                         <div 
                                           key={idx} 
                                           className={`flex-1 h-full rounded flex items-center justify-center relative transition-all ${
-                                            isCurrent 
+                                            isCurrent && project.status !== "completed"
                                               ? "shadow-[0_1px_4px_rgba(59,130,246,0.3)] saturate-125 z-10 font-bold" 
                                               : ""
                                           }`}
@@ -928,13 +937,15 @@ export default function Dashboard() {
                                         >
                                           {/* Text indicator */}
                                           <span className={`text-[9px] font-extrabold select-none ${
-                                            isPastOrCurrent ? "text-white" : "text-slate-300 dark:text-slate-700 font-light"
+                                            isPastOrCurrent 
+                                              ? "text-white" 
+                                              : "text-slate-350 dark:text-slate-700 font-light"
                                           }`}>
                                             {idx === 1 ? "D" : idx === 2 ? "M" : idx === 3 ? "A" : idx === 4 ? "I" : "C"}
                                           </span>
 
-                                          {/* Active blinking dot helper */}
-                                          {isCurrent && (
+                                          {/* Active blinking dot helper (only for live active projects) */}
+                                          {isCurrent && project.status === "active" && (
                                             <span className="absolute -top-0.5 -right-0.5 flex h-1 w-1">
                                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
                                               <span className="relative inline-flex rounded-full h-1 w-1 bg-white"></span>
@@ -950,7 +961,7 @@ export default function Dashboard() {
                                     <div className="text-[10px] font-bold font-mono tracking-wide flex items-center gap-2">
                                       <span>{pos.startDate}</span>
                                       <span className="text-blue-500">→</span>
-                                      <span>{pos.endDate} (estimerat slut)</span>
+                                      <span>{pos.endDate} {project.status === "completed" ? "(Slutfört - faktisk tid)" : "(estimerat slut)"}</span>
                                     </div>
                                   </div>
 
@@ -958,7 +969,7 @@ export default function Dashboard() {
 
                               </div>
 
-                            </div>
+                            </Link>
                           );
                         })}
                       </div>
