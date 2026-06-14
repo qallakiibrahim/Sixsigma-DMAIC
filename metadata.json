@@ -1,0 +1,8 @@
+{
+  "name": "Six Sigma DMAIC Toolbox",
+  "description": "A comprehensive web-based platform for Six Sigma practitioners, featuring DMAIC phase tracking, statistical calculators, and project collaboration tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

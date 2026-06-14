@@ -1,0 +1,243 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A Six Sigma DMAIC project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "current_phase": { "type": "number" },
+        "status": { "type": "string" },
+        "user_id": { "type": "string" },
+        "estimated_savings": { "type": "number" },
+        "actual_savings": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "user_id"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User profile containing base information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "display_name": { "type": "string" },
+        "user_id": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id"]
+    },
+    "ProjectCalculation": {
+      "title": "ProjectCalculation",
+      "description": "Six Sigma DMAIC calculator saves",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "tool_id": { "type": "string" },
+        "tool_name": { "type": "string" },
+        "phase": { "type": "number" },
+        "inputs": { "type": "object" },
+        "results": { "type": "object" },
+        "notes": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "user_id", "tool_id", "tool_name", "phase"]
+    },
+    "ProjectCollaborator": {
+      "title": "ProjectCollaborator",
+      "description": "Records collaborators for projects",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "user_email": { "type": "string" },
+        "role": { "type": "string" },
+        "invited_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "user_id", "user_email", "invited_by"]
+    },
+    "ProjectControlChart": {
+      "title": "ProjectControlChart",
+      "description": "Control Chart configurations and data points",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "chart_name": { "type": "string" },
+        "chart_type": { "type": "string" },
+        "data_points": { "type": "array" },
+        "control_limits": { "type": "object" },
+        "notes": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "user_id", "chart_name", "chart_type"]
+    },
+    "ProjectNote": {
+      "title": "ProjectNote",
+      "description": "Notes documented on each DMAIC phase of a project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "phase": { "type": "number" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "user_id", "phase", "title"]
+    },
+    "RaciMatrix": {
+      "title": "RaciMatrix",
+      "description": "RACI team matrices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "activity": { "type": "string" },
+        "responsible": { "type": "string" },
+        "accountable": { "type": "string" },
+        "consulted": { "type": "string" },
+        "informed": { "type": "string" },
+        "phase": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "user_id", "activity"]
+    },
+    "SigmaTracking": {
+      "title": "SigmaTracking",
+      "description": "Tracks quality sigma metric records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "phase": { "type": "number" },
+        "sigma_level": { "type": "number" },
+        "dpmo": { "type": "number" },
+        "measurement_date": { "type": "string" },
+        "notes": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "user_id", "phase", "sigma_level", "measurement_date"]
+    },
+    "TollgateItem": {
+      "title": "TollgateItem",
+      "description": "Phase tollgate checklist item status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "phase": { "type": "number" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "is_completed": { "type": "boolean" },
+        "completed_by": { "type": "string" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "sort_order": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "phase", "title"]
+    },
+    "TollgateReview": {
+      "title": "TollgateReview",
+      "description": "Historical audit record of AI Tollgate Reviews done in DMAIC",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "phase": { "type": "number" },
+        "reviewer_id": { "type": "string" },
+        "score": { "type": "number" },
+        "status": { "type": "string" },
+        "missing_artifacts": { "type": "array" },
+        "recommendations": { "type": "string" },
+        "criterion_assessments": { "type": "object" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "phase", "reviewer_id", "score", "status"]
+    },
+    "ControlPlan": {
+      "title": "ControlPlan",
+      "description": "Six Sigma Process Control Plans",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "process_step": { "type": "string" },
+        "characteristic": { "type": "string" },
+        "specification": { "type": "string" },
+        "measurement_method": { "type": "string" },
+        "sample_size": { "type": "string" },
+        "frequency": { "type": "string" },
+        "responsible": { "type": "string" },
+        "reaction_plan": { "type": "string" },
+        "sort_order": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["project_id", "user_id", "process_step", "characteristic"]
+    }
+  },
+  "firestore": {
+    "control_plans": {
+      "schema": "ControlPlan",
+      "description": "Six Sigma Process Control Plans"
+    },
+    "projects": {
+      "schema": "Project",
+      "description": "Six Sigma DMAIC projects collection"
+    },
+    "profiles": {
+      "schema": "Profile",
+      "description": "User profile documents"
+    },
+    "project_calculations": {
+      "schema": "ProjectCalculation",
+      "description": "Saves of calculations performed for a project"
+    },
+    "project_collaborators": {
+      "schema": "ProjectCollaborator",
+      "description": "Records list of authorized partners in a project"
+    },
+    "project_control_charts": {
+      "schema": "ProjectControlChart",
+      "description": "Quality control charts stored for a project"
+    },
+    "project_notes": {
+      "schema": "ProjectNote",
+      "description": "Workspace notes grouped by DMAIC stage"
+    },
+    "raci_matrix": {
+      "schema": "RaciMatrix",
+      "description": "Project level RACI assignments"
+    },
+    "sigma_tracking": {
+      "schema": "SigmaTracking",
+      "description": "Registered historical DPMO and Sigma level entries"
+    },
+    "tollgate_items": {
+      "schema": "TollgateItem",
+      "description": "Tollgate checklist statuses"
+    },
+    "tollgate_reviews": {
+      "schema": "TollgateReview",
+      "description": "Historical audit log of AI-generated tollgate phase reviews"
+    }
+  }
+}

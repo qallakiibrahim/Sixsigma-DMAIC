@@ -1,0 +1,653 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      control_plans: {
+        Row: {
+          characteristic: string
+          created_at: string
+          frequency: string | null
+          id: string
+          measurement_method: string | null
+          process_step: string
+          project_id: string
+          reaction_plan: string | null
+          responsible: string | null
+          sample_size: string | null
+          sort_order: number
+          specification: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          characteristic: string
+          created_at?: string
+          frequency?: string | null
+          id?: string
+          measurement_method?: string | null
+          process_step: string
+          project_id: string
+          reaction_plan?: string | null
+          responsible?: string | null
+          sample_size?: string | null
+          sort_order?: number
+          specification?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          characteristic?: string
+          created_at?: string
+          frequency?: string | null
+          id?: string
+          measurement_method?: string | null
+          process_step?: string
+          project_id?: string
+          reaction_plan?: string | null
+          responsible?: string | null
+          sample_size?: string | null
+          sort_order?: number
+          specification?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "control_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_calculations: {
+        Row: {
+          created_at: string
+          id: string
+          inputs: Json
+          notes: string | null
+          phase: number
+          project_id: string
+          results: Json
+          tool_id: string
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inputs?: Json
+          notes?: string | null
+          phase: number
+          project_id: string
+          results?: Json
+          tool_id: string
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inputs?: Json
+          notes?: string | null
+          phase?: number
+          project_id?: string
+          results?: Json
+          tool_id?: string
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_calculations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_collaborators: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string
+          project_id: string
+          role: string | null
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by: string
+          project_id: string
+          role?: string | null
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string
+          project_id?: string
+          role?: string | null
+          user_email?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_control_charts: {
+        Row: {
+          chart_name: string
+          chart_type: string
+          control_limits: Json
+          created_at: string
+          data_points: Json
+          id: string
+          notes: string | null
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chart_name: string
+          chart_type: string
+          control_limits?: Json
+          created_at?: string
+          data_points?: Json
+          id?: string
+          notes?: string | null
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chart_name?: string
+          chart_type?: string
+          control_limits?: Json
+          created_at?: string
+          data_points?: Json
+          id?: string
+          notes?: string | null
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_control_charts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          phase: number
+          project_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          phase: number
+          project_id: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          phase?: number
+          project_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          actual_savings: number | null
+          created_at: string
+          current_phase: number | null
+          description: string | null
+          estimated_savings: number | null
+          id: string
+          name: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_savings?: number | null
+          created_at?: string
+          current_phase?: number | null
+          description?: string | null
+          estimated_savings?: number | null
+          id?: string
+          name: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_savings?: number | null
+          created_at?: string
+          current_phase?: number | null
+          description?: string | null
+          estimated_savings?: number | null
+          id?: string
+          name?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      raci_matrix: {
+        Row: {
+          accountable: string | null
+          activity: string
+          consulted: string | null
+          created_at: string
+          id: string
+          informed: string | null
+          phase: number | null
+          project_id: string
+          responsible: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accountable?: string | null
+          activity: string
+          consulted?: string | null
+          created_at?: string
+          id?: string
+          informed?: string | null
+          phase?: number | null
+          project_id: string
+          responsible?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accountable?: string | null
+          activity?: string
+          consulted?: string | null
+          created_at?: string
+          id?: string
+          informed?: string | null
+          phase?: number | null
+          project_id?: string
+          responsible?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raci_matrix_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sigma_tracking: {
+        Row: {
+          created_at: string
+          dpmo: number | null
+          id: string
+          measurement_date: string
+          notes: string | null
+          phase: number
+          project_id: string
+          sigma_level: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dpmo?: number | null
+          id?: string
+          measurement_date?: string
+          notes?: string | null
+          phase: number
+          project_id: string
+          sigma_level: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dpmo?: number | null
+          id?: string
+          measurement_date?: string
+          notes?: string | null
+          phase?: number
+          project_id?: string
+          sigma_level?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sigma_tracking_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tollgate_items: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_completed: boolean
+          phase: number
+          project_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          phase: number
+          project_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          phase?: number
+          project_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tollgate_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      project_collaborators_safe: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          invited_by: string | null
+          project_id: string | null
+          role: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          invited_by?: string | null
+          project_id?: string | null
+          role?: string | null
+          user_email?: never
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          invited_by?: string | null
+          project_id?: string | null
+          role?: string | null
+          user_email?: never
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Functions: {
+      get_project_collaborators_safe: {
+        Args: { _project_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          invited_by: string
+          project_id: string
+          role: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      has_project_access: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_editor: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_owner: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

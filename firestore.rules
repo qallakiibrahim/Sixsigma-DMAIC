@@ -1,0 +1,226 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny Catch-all Gate
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function isValidCollabId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Complex / Relational Access Checks ---
+    function isProjectOwner(projectId) {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/projects/$(projectId)) &&
+        get(/databases/$(database)/documents/projects/$(projectId)).data.user_id == request.auth.uid;
+    }
+
+    function isProjectCollaborator(projectId) {
+      return isSignedIn() && (
+        isProjectOwner(projectId) ||
+        exists(/databases/$(database)/documents/project_collaborators/$(projectId + "_" + request.auth.uid)) ||
+        (request.auth.token.email != null && exists(/databases/$(database)/documents/project_collaborators/$(projectId + "_" + request.auth.token.email.lower())))
+      );
+    }
+
+    function hasProjectAccess(projectId) {
+      return isProjectCollaborator(projectId);
+    }
+
+    // --- Field and Entity Validations ---
+    function isValidProject(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.user_id is string &&
+             (data.get('status', null) == null || (data.get('status', null) is string && data.get('status', null).size() <= 50)) &&
+             (data.get('description', null) == null || (data.get('description', null) is string && data.get('description', null).size() <= 2000)) &&
+             (data.get('current_phase', null) == null || data.get('current_phase', null) is int || data.get('current_phase', null) is float) &&
+             (data.get('estimated_savings', null) == null || data.get('estimated_savings', null) is int || data.get('estimated_savings', null) is float) &&
+             (data.get('actual_savings', null) == null || data.get('actual_savings', null) is int || data.get('actual_savings', null) is float);
+    }
+
+    function isValidProfile(data) {
+      return data.user_id == request.auth.uid &&
+             (data.get('display_name', null) == null || (data.get('display_name', null) is string && data.get('display_name', null).size() <= 100));
+    }
+
+    // Since Firebase update can be partial, we check optional keys
+    function isValidProjectCalculation(data) {
+      return data.project_id is string &&
+             data.user_id == request.auth.uid &&
+             data.tool_id is string && data.tool_id.size() <= 100 &&
+             data.tool_name is string && data.tool_name.size() <= 100 &&
+             (data.get('phase', null) == null || data.get('phase', null) is int || data.get('phase', null) is float);
+    }
+
+    function isValidProjectCollaborator(data) {
+      return data.project_id is string &&
+             data.user_id is string &&
+             data.user_email is string && data.user_email.size() <= 200 &&
+             data.invited_by == request.auth.uid;
+    }
+
+    // Since Firebase update can be partial, we check optional keys
+    function isValidProjectControlChart(data) {
+      return data.project_id is string &&
+             data.user_id == request.auth.uid &&
+             data.chart_name is string && data.chart_name.size() <= 100 &&
+             data.chart_type is string && data.chart_type.size() <= 50;
+    }
+
+    function isValidProjectNote(data) {
+      return data.project_id is string &&
+             data.user_id == request.auth.uid &&
+             (data.get('phase', null) == null || data.get('phase', null) is int || data.get('phase', null) is float) &&
+             data.title is string && data.title.size() <= 200;
+    }
+
+    // Since Firebase update can be partial, we check optional keys
+    function isValidRaciMatrix(data) {
+      return data.project_id is string &&
+             data.user_id == request.auth.uid &&
+             data.activity is string && data.activity.size() <= 500;
+    }
+
+    function isValidSigmaTracking(data) {
+      return data.project_id is string &&
+             data.user_id == request.auth.uid &&
+             (data.get('phase', null) == null || data.get('phase', null) is int || data.get('phase', null) is float) &&
+             (data.get('sigma_level', null) == null || data.get('sigma_level', null) is int || data.get('sigma_level', null) is float) &&
+             data.measurement_date is string && data.measurement_date.size() <= 50;
+    }
+
+    function isValidControlPlan(data) {
+      return data.project_id is string &&
+             data.user_id == request.auth.uid &&
+             data.characteristic is string && data.characteristic.size() <= 500 &&
+             data.process_step is string && data.process_step.size() <= 500 &&
+             (data.get('frequency', null) == null || (data.get('frequency', null) is string && data.get('frequency', null).size() <= 200)) &&
+             (data.get('measurement_method', null) == null || (data.get('measurement_method', null) is string && data.get('measurement_method', null).size() <= 500)) &&
+             (data.get('reaction_plan', null) == null || (data.get('reaction_plan', null) is string && data.get('reaction_plan', null).size() <= 1000)) &&
+             (data.get('responsible', null) == null || (data.get('responsible', null) is string && data.get('responsible', null).size() <= 200)) &&
+             (data.get('sample_size', null) == null || (data.get('sample_size', null) is string && data.get('sample_size', null).size() <= 200)) &&
+             (data.get('sort_order', null) == null || data.get('sort_order', null) is int || data.get('sort_order', null) is float) &&
+             (data.get('specification', null) == null || (data.get('specification', null) is string && data.get('specification', null).size() <= 500));
+    }
+
+    function isValidTollgateItem(data) {
+      return data.project_id is string &&
+             (data.get('phase', null) == null || data.get('phase', null) is int || data.get('phase', null) is float) &&
+             data.title is string && data.title.size() <= 500;
+    }
+
+    function isValidTollgateReview(data) {
+      return data.project_id is string &&
+             (data.get('phase', null) == null || data.get('phase', null) is int || data.get('phase', null) is float) &&
+             data.reviewer_id == request.auth.uid &&
+             (data.get('score', null) == null || data.get('score', null) is int || data.get('score', null) is float) &&
+             data.status is string && data.status.size() <= 100;
+    }
+
+    // --- Collection Routes & Access Specifications ---
+
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isProjectCollaborator(projectId));
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(projectId) && isValidProject(incoming()) && incoming().user_id == request.auth.uid;
+      allow update: if isSignedIn() && isValidProject(incoming()) && incoming().user_id == existing().user_id && (existing().user_id == request.auth.uid || isProjectCollaborator(projectId));
+      allow delete: if isSignedIn() && existing().user_id == request.auth.uid;
+    }
+
+    match /profiles/{profileId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && profileId == request.auth.uid && isValidProfile(incoming());
+      allow update: if isSignedIn() && profileId == request.auth.uid && existing().user_id == request.auth.uid && isValidProfile(incoming());
+      allow delete: if isSignedIn() && profileId == request.auth.uid && existing().user_id == request.auth.uid;
+    }
+
+    match /project_calculations/{calcId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(calcId) && isValidProjectCalculation(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidProjectCalculation(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /control_plans/{cpId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(cpId) && isValidControlPlan(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidControlPlan(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /project_collaborators/{collabId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidCollabId(collabId) && isValidProjectCollaborator(incoming()) && isProjectOwner(incoming().project_id);
+      allow update: if isSignedIn() && (
+        (isValidProjectCollaborator(incoming()) && isProjectOwner(existing().project_id) && isProjectOwner(incoming().project_id)) ||
+        (existing().user_email != null && request.auth.token.email != null && existing().user_email.lower() == request.auth.token.email.lower() && incoming().user_id == request.auth.uid && incoming().get('user_email', existing().user_email) == existing().user_email && incoming().get('project_id', existing().project_id) == existing().project_id)
+      );
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /project_control_charts/{chartId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(chartId) && isValidProjectControlChart(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidProjectControlChart(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /project_notes/{noteId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(noteId) && isValidProjectNote(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidProjectNote(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /raci_matrix/{raciId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(raciId) && isValidRaciMatrix(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidRaciMatrix(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /sigma_tracking/{sigmaId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(sigmaId) && isValidSigmaTracking(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidSigmaTracking(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /tollgate_items/{itemId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(itemId) && isValidTollgateItem(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidTollgateItem(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+
+    match /tollgate_reviews/{reviewId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(reviewId) && isValidTollgateReview(incoming()) && hasProjectAccess(incoming().project_id);
+      allow update: if isSignedIn() && isValidTollgateReview(incoming()) && hasProjectAccess(existing().project_id) && hasProjectAccess(incoming().project_id);
+      allow delete: if isSignedIn() && hasProjectAccess(existing().project_id);
+    }
+  }
+}
