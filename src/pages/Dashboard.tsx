@@ -9,12 +9,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, BarChart3, CheckCircle2, Clock, ArrowRight, FolderOpen,
-  TrendingUp, Target, AlertTriangle, DollarSign, Activity, CalendarDays
+  TrendingUp, Target, AlertTriangle, DollarSign, Activity, CalendarDays,
+  Search, Filter, ArrowUpRight, Coins
 } from "lucide-react";
 import { phases } from "@/data/dmaic-tools";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
-  BarChart, Bar, Cell
+  BarChart, Bar, Cell, AreaChart, Area
 } from "recharts";
 
 interface Project {
@@ -67,6 +68,12 @@ export default function Dashboard() {
   const [toolsUsed, setToolsUsed] = useState<Record<string, string[]>>({});
   const [fmeaRisks, setFmeaRisks] = useState<FMEARisk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Search and Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "completed">("all");
+  const [phaseFilter, setPhaseFilter] = useState<number | "all">("all");
+
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -160,6 +167,15 @@ export default function Dashboard() {
     return acc;
   }, {});
 
+  // Compute filtered projects list for status card grid
+  const filteredProjects = projects.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = statusFilter === "all" || p.status === statusFilter;
+    const matchesPhase = phaseFilter === "all" || p.current_phase === phaseFilter;
+    return matchesSearch && matchesStatus && matchesPhase;
+  });
+
   // Phase distribution for bar chart
   const phaseDistData = phases.map(phase => ({
     name: phase.name,
@@ -176,6 +192,35 @@ export default function Dashboard() {
   // Expected tools per phase
   const expectedToolsPerPhase: Record<number, number> = { 1: 7, 2: 10, 3: 12, 4: 11, 5: 13 };
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/95 dark:bg-slate-950/95 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-lg backdrop-blur-md text-xs">
+          <p className="font-semibold text-slate-500 dark:text-slate-400 mb-1">{label}</p>
+          <p className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+            σ-nivå: <span className="text-blue-500">{Number(payload[0].value).toFixed(2)}σ</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomBarTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/95 dark:bg-slate-950/95 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-lg backdrop-blur-md text-xs">
+          <p className="font-semibold text-slate-950 dark:text-slate-100 mb-1">{label}</p>
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+            Antal aktiva: <span className="text-blue-600 dark:text-blue-400 font-mono text-sm">{payload[0].value} par</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (loading || isLoading) {
     return (
       <Layout>
@@ -188,214 +233,362 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <section className="py-8">
+      <section className="py-8 bg-slate-50/50 dark:bg-slate-950/20 min-h-screen">
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto space-y-8">
 
-            {/* Header */}
-            <div className="flex items-center justify-between">
+            {/* Premium Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800/40 shadow-sm">
               <div>
-                <h1 className="text-3xl font-bold">Projektportfölj</h1>
-                <p className="text-muted-foreground mt-1">Översikt, KPI:er och riskindikatorer</p>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">
+                    Portfolio
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">Uppdaterad idag</p>
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-1">Projektportfölj</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Din realtidsöversikt över DMAIC-metodik, KPI:er och riskhantering.</p>
               </div>
-              <Button asChild>
-                <Link to="/projects">Alla projekt <ArrowRight className="h-4 w-4 ml-2" /></Link>
+              <Button asChild className="shrink-0 font-medium">
+                <Link to="/projects">
+                  Hantera projekt <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
               </Button>
             </div>
 
-            {/* Top KPI Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <FolderOpen className="h-7 w-7 mx-auto text-primary mb-2" />
-                  <div className="text-3xl font-bold">{projects.length}</div>
-                  <p className="text-xs text-muted-foreground">Totalt projekt</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <Activity className="h-7 w-7 mx-auto text-blue-500 mb-2" />
-                  <div className="text-3xl font-bold">{activeProjects.length}</div>
-                  <p className="text-xs text-muted-foreground">Aktiva</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <CheckCircle2 className="h-7 w-7 mx-auto text-green-500 mb-2" />
-                  <div className="text-3xl font-bold">{completedProjects.length}</div>
-                  <p className="text-xs text-muted-foreground">Avslutade</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <DollarSign className="h-7 w-7 mx-auto text-emerald-500 mb-2" />
-                  <div className="text-2xl font-bold">{formatCurrency(totalEstimatedSavings || null)}</div>
-                  <p className="text-xs text-muted-foreground">Uppsk. besparing</p>
-                </CardContent>
-              </Card>
-              <Card className={highRiskFmea.length > 0 ? "border-destructive/50 bg-destructive/5" : ""}>
-                <CardContent className="pt-6 text-center">
-                  <Target className={`h-7 w-7 mx-auto mb-2 ${highRiskFmea.length > 0 ? "text-destructive" : "text-muted-foreground"}`} />
-                  <div className="text-3xl font-bold">{highRiskFmea.length}</div>
-                  <p className="text-xs text-muted-foreground">FMEA högrisk (RPN≥200)</p>
-                </CardContent>
-              </Card>
-              <Card className={stagnantProjects.length > 0 ? "border-orange-400/50 bg-orange-50/30 dark:bg-orange-950/20" : ""}>
-                <CardContent className="pt-6 text-center">
-                  <AlertTriangle className={`h-7 w-7 mx-auto mb-2 ${stagnantProjects.length > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
-                  <div className="text-3xl font-bold">{stagnantProjects.length}</div>
-                  <p className="text-xs text-muted-foreground">Stagnerade (&gt;14 dagar)</p>
-                </CardContent>
-              </Card>
+            {/* Top Premium KPI Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              
+              {/* Card 1: Totalt */}
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-blue-200 dark:hover:border-blue-900/40 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl group-hover:scale-110 transition-transform">
+                    <FolderOpen className="h-5 w-5" />
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] font-mono font-medium">Totalt</Badge>
+                </div>
+                <div className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{projects.length}</div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">Registrerade projekt</p>
+              </div>
+
+              {/* Card 2: Aktiva */}
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-emerald-200 dark:hover:border-emerald-900/40 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
+                    <Activity className="h-5 w-5" />
+                  </div>
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+                <div className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{activeProjects.length}</div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">Under genomförande</p>
+              </div>
+
+              {/* Card 3: Avslutade */}
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-slate-300 dark:hover:border-slate-700 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-slate-50 dark:bg-slate-850 text-slate-600 dark:text-slate-300 rounded-xl group-hover:scale-110 transition-transform">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono text-emerald-600 border-emerald-100 dark:text-emerald-400 dark:border-emerald-950">
+                    {projects.length > 0 ? Math.round((completedProjects.length / projects.length) * 100) : 0}% klar
+                  </Badge>
+                </div>
+                <div className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{completedProjects.length}</div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">Säkrade & avslutade</p>
+              </div>
+
+              {/* Card 4: Besparingar */}
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-indigo-200 dark:hover:border-indigo-900/40 transition-all group col-span-1 md:col-span-1">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
+                    <Coins className="h-5 w-5" />
+                  </div>
+                  <Badge variant="outline" className="text-[9px] text-indigo-600 border-indigo-100 dark:text-indigo-300 dark:border-indigo-950/60">SEK</Badge>
+                </div>
+                <div className="text-xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-400 truncate" title={formatCurrency(totalActualSavings || totalEstimatedSavings)}>
+                  {formatCurrency(totalActualSavings || totalEstimatedSavings)}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">Ackumulerad besparing</p>
+              </div>
+
+              {/* Card 5: RPN Risk */}
+              <div className={`p-5 rounded-2xl border shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all group ${
+                highRiskFmea.length > 0 
+                  ? "bg-red-50/40 dark:bg-red-950/10 border-red-100 dark:border-red-950/40 hover:border-red-200" 
+                  : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700"
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2 rounded-xl group-hover:scale-110 transition-transform ${
+                    highRiskFmea.length > 0 ? "bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400" : "bg-slate-50 dark:bg-slate-850 text-slate-500"
+                  }`}>
+                    <Target className="h-5 w-5" />
+                  </div>
+                  {highRiskFmea.length > 0 && (
+                    <span className="flex h-2 w-2 rounded-full bg-red-500 animate-ping"></span>
+                  )}
+                </div>
+                <div className={`text-3xl font-extrabold tracking-tight ${highRiskFmea.length > 0 ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-slate-100"}`}>
+                  {highRiskFmea.length}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">FMEA risker (RPN ≥ 200)</p>
+              </div>
+
+              {/* Card 6: Stagnerade */}
+              <div className={`p-5 rounded-2xl border shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all group ${
+                stagnantProjects.length > 0
+                  ? "bg-amber-50/40 dark:bg-amber-950/10 border-amber-100 dark:border-amber-950/40 hover:border-amber-200"
+                  : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700"
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2 rounded-xl group-hover:scale-110 transition-transform ${
+                    stagnantProjects.length > 0 ? "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400" : "bg-slate-50 dark:bg-slate-850 text-slate-500"
+                  }`}>
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className={`text-3xl font-extrabold tracking-tight ${stagnantProjects.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-900 dark:text-slate-100"}`}>
+                  {stagnantProjects.length}
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium font-sans">Inaktivitet &gt;14d</p>
+              </div>
+
             </div>
 
-            {/* Middle row: Phase distribution + Sigma trend */}
+            {/* Graphs Row with Premium Background & Gradients */}
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Phase Distribution */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    Fasfördelning (aktiva)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-48">
+              
+              {/* Graph 1: Phase distribution */}
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-blue-50 dark:bg-blue-950/40 rounded-lg text-blue-600 dark:text-blue-400">
+                      <BarChart3 className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Fasfördelning</h3>
+                      <p className="text-[11px] text-slate-400">Antal aktiva projekt per DMAIC-fas</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    {activeProjects.length} aktiva
+                  </Badge>
+                </div>
+                
+                <div className="h-52 pt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={phaseDistData} margin={{ top: 10, right: 10, bottom: 0, left: -25 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-10 dark:opacity-5" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
+                      <Bar dataKey="count" radius={[5, 5, 0, 0]} barSize={34}>
+                        {phaseDistData.map((_, i) => (
+                          <Cell key={i} fill={PHASE_COLORS[i]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Graph 2: Sigma Level Trend (Area Gradient) */}
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-violet-50 dark:bg-violet-950/40 rounded-lg text-violet-600 dark:text-violet-400">
+                      <TrendingUp className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Sigma-nivå Trend</h3>
+                      <p className="text-[11px] text-slate-400">Kvalitetshöjning över tid (alla projekt)</p>
+                    </div>
+                  </div>
+                  {sigmaTrendData.length > 0 && (
+                    <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 font-mono border-emerald-100 dark:border-emerald-950/50">
+                      Live data
+                    </Badge>
+                  )}
+                </div>
+
+                {sigmaTrendData.length === 0 ? (
+                  <div className="h-52 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-950/10 rounded-xl space-y-1">
+                    <TrendingUp className="h-8 w-8 opacity-40 text-slate-400" />
+                    <p className="text-xs font-semibold">Ingen sigma-spårning registrerad</p>
+                    <p className="text-[10px] max-w-[200px] text-center opacity-85">Fyll i mätdata på projektsidan för att rita trenden.</p>
+                  </div>
+                ) : (
+                  <div className="h-52 pt-2">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={phaseDistData} margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                        <Tooltip
-                          contentStyle={{ borderRadius: 8, fontSize: 13 }}
-                          formatter={(value: number) => [`${value} projekt`, "Antal"]}
+                      <AreaChart data={sigmaTrendData} margin={{ top: 10, right: 10, bottom: 0, left: -25 }}>
+                        <defs>
+                          <linearGradient id="sigmaGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-10 dark:opacity-5" vertical={false} />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+                        <YAxis domain={[0, 6]} tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="sigma" 
+                          stroke="#3b82f6" 
+                          strokeWidth={2.5} 
+                          fillOpacity={1} 
+                          fill="url(#sigmaGradient)" 
+                          dot={{ r: 3, fill: '#3b82f6', strokeWidth: 1.5, stroke: '#fff' }} 
                         />
-                        <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                          {phaseDistData.map((_, i) => (
-                            <Cell key={i} fill={PHASE_COLORS[i]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
+                      </AreaChart>
                     </ResponsiveContainer>
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
 
-              {/* Sigma Trend */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Sigma-trend (alla projekt)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {sigmaTrendData.length === 0 ? (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-                      Ingen sigma-data registrerad ännu
-                    </div>
-                  ) : (
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={sigmaTrendData} margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                          <YAxis domain={[0, 6]} tick={{ fontSize: 12 }} />
-                          <Tooltip contentStyle={{ borderRadius: 8, fontSize: 13 }} />
-                          <Line type="monotone" dataKey="sigma" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} name="σ-nivå" />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
 
-            {/* Stagnant Projects Alert */}
-            {stagnantProjects.length > 0 && (
-              <Card className="border-orange-400/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                    <AlertTriangle className="h-5 w-5" />
-                    Projekt som kräver uppmärksamhet
-                  </CardTitle>
-                  <CardDescription>Dessa projekt har inte uppdaterats på mer än 14 dagar</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {stagnantProjects.map(p => {
-                      const days = daysSince(p.updated_at);
-                      const phaseData = phases.find(ph => ph.id === p.current_phase) || phases[0];
-                      return (
-                        <Link to={`/project/${p.id}`} key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl">{phaseData.icon}</span>
-                            <div>
-                              <p className="font-medium">{p.name}</p>
-                              <p className="text-xs text-muted-foreground">Fas: {phaseData.name}</p>
+            {/* Intelligent Priority Alerts Column */}
+            {(stagnantProjects.length > 0 || highRiskFmea.length > 0) && (
+              <div className="grid md:grid-cols-2 gap-4">
+                
+                {/* Active Stagnant Alerts */}
+                {stagnantProjects.length > 0 && (
+                  <div className="bg-amber-50/35 dark:bg-amber-950/5 border border-amber-100/80 dark:border-amber-950/30 p-5 rounded-2xl relative overflow-hidden space-y-3">
+                    <div className="absolute right-0 top-0 translate-x-[15%] -translate-y-[15%] w-24 h-24 bg-amber-500/5 dark:bg-amber-500/2 rounded-full pointer-events-none"></div>
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      <h4 className="font-bold text-sm">Stagnerade projekt (åtgärd krävs)</h4>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Följande pågående projekt har legat orörda i mer än 14 dagar.</p>
+                    <div className="space-y-2">
+                      {stagnantProjects.map(p => {
+                        const days = daysSince(p.updated_at);
+                        const phaseData = phases.find(ph => ph.id === p.current_phase) || phases[0];
+                        return (
+                          <Link 
+                            to={`/project/${p.id}`} 
+                            key={p.id} 
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-100/50 dark:border-amber-900/10 hover:shadow-sm transition-all"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">{phaseData.icon}</span>
+                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-1">{p.name}</span>
                             </div>
-                          </div>
-                          <Badge variant="outline" className="text-orange-600 border-orange-300 dark:text-orange-400">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {days} dagar sedan
-                          </Badge>
-                        </Link>
-                      );
-                    })}
+                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono">
+                              <Clock className="w-3 h-3" />
+                              {days} dagar sedan
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                )}
+
+                {/* FMEA RPN Warnings */}
+                {highRiskFmea.length > 0 && (
+                  <div className="bg-red-50/35 dark:bg-red-950/5 border border-red-100/80 dark:border-red-950/30 p-5 rounded-2xl relative overflow-hidden space-y-3">
+                    <div className="absolute right-0 top-0 translate-x-[15%] -translate-y-[15%] w-24 h-24 bg-red-500/5 dark:bg-red-500/2 rounded-full pointer-events-none"></div>
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                      <Target className="h-4 w-4 shrink-0" />
+                      <h4 className="font-bold text-sm">FMEA Kritiska processrisker</h4>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Dessa riskfaktorer har ett kritiskt Risk Priority Number (RPN) ≥ 200.</p>
+                    <div className="space-y-2">
+                      {highRiskFmea.slice(0, 3).map((risk, i) => {
+                        const proj = projects.find(p => p.id === risk.project_id);
+                        return (
+                          <Link 
+                            to={`/project/${risk.project_id}`} 
+                            key={i} 
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-red-100/50 dark:border-red-900/10 hover:shadow-sm transition-all"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="text-[10px] text-slate-400 truncate">{proj?.name}</p>
+                              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate pr-0.5">Felläge: {risk.failureMode}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[9px] font-bold uppercase tracking-tight text-white bg-red-600 px-2 py-0.5 rounded-full shadow-[0_1px_3px_rgba(239,68,68,0.2)] font-mono">
+                                RPN {risk.rpn}
+                              </span>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+              </div>
             )}
 
-            {/* FMEA High Risk Alert */}
-            {highRiskFmea.length > 0 && (
-              <Card className="border-destructive/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2 text-destructive">
-                    <Target className="h-5 w-5" />
-                    FMEA Högriskvarningar (RPN ≥ 200)
-                  </CardTitle>
-                  <CardDescription>Dessa fellägen kräver omedelbara åtgärder</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {highRiskFmea.map((risk, i) => {
-                      const proj = projects.find(p => p.id === risk.project_id);
-                      return (
-                        <Link to={`/project/${risk.project_id}`} key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                          <div>
-                            <p className="font-medium">{proj?.name || "Okänt projekt"}</p>
-                            <p className="text-xs text-muted-foreground">Felläge: {risk.failureMode}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={risk.rpn >= 300 ? "destructive" : "outline"} className={risk.rpn < 300 ? "text-destructive border-destructive/50" : ""}>
-                              RPN {risk.rpn}
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">{risk.risk}</Badge>
-                          </div>
-                        </Link>
-                      );
-                    })}
+            {/* Search & Interface Controller Segment */}
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Projektstatus & Spårbarhet</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Använd filtren för att isolera och granska specifika projekt eller faskategorier.</p>
+                </div>
+                
+                {/* Search Inputs and Controls */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative max-w-xs w-full">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Sök projekt..."
+                      className="w-full text-xs h-9 pl-9 pr-4 rounded-xl border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-slate-400"
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Project Cards */}
-            {projects.length === 0 ? (
-              <Card className="text-center py-12">
-                <CardContent>
-                  <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Inga projekt</h3>
-                  <p className="text-muted-foreground mb-4">Skapa ditt första DMAIC-projekt</p>
-                  <Button asChild><Link to="/projects">Gå till Projekt</Link></Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Projektstatus</h2>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {projects.map(project => {
+                  <select
+                    value={statusFilter}
+                    onChange={(e: any) => setStatusFilter(e.target.value)}
+                    className="text-xs h-9 rounded-xl border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="all">Alla statusar</option>
+                    <option value="active">Aktiva</option>
+                    <option value="completed">Avslutade</option>
+                  </select>
+
+                  <select
+                    value={phaseFilter === "all" ? "all" : phaseFilter}
+                    onChange={(e: any) => setPhaseFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                    className="text-xs h-9 rounded-xl border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="all">Alla faser</option>
+                    {phases.map(p => (
+                      <option key={p.id} value={p.id}>{p.id}. {p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Grid matching dynamic list */}
+              {filteredProjects.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl p-12 text-center text-slate-400 dark:text-slate-500">
+                  <FolderOpen className="h-10 w-10 mx-auto text-slate-400 opacity-60 mb-3" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Inga matchande projekt hittades</p>
+                  <p className="text-xs opacity-80 mt-1">Ändra dina sökord eller nollställ filterkriterierna.</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("all");
+                      setPhaseFilter("all");
+                    }}
+                  >
+                    Återställ filter
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredProjects.map(project => {
                     const phaseData = phases.find(p => p.id === project.current_phase) || phases[0];
                     const tp = tollgateProgress[project.id];
                     const tollgatePercent = tp ? Math.round((tp.completed / tp.total) * 100) : 0;
@@ -403,108 +596,158 @@ export default function Dashboard() {
                     const latestSigma = projectSigma.length > 0 ? Number(projectSigma[projectSigma.length - 1].sigma_level) : null;
                     const firstSigma = projectSigma.length > 0 ? Number(projectSigma[0].sigma_level) : null;
                     const tools = toolsUsed[project.id] || [];
-                    const phaseTools = phases.find(p => p.id === project.current_phase)?.tools.length || 0;
+                    const expectedCount = expectedToolsPerPhase[project.current_phase] || 10;
+                    const toolMaturityPercent = Math.min(100, Math.round((tools.length / expectedCount) * 100));
                     const days = daysSince(project.updated_at);
                     const isStagnant = project.status === "active" && days > 14;
 
+                    // Compute dynamic left border color depending on current active phase
+                    const phaseBorderStyles: Record<number, string> = {
+                      1: "border-l-[5px] border-l-blue-500 hover:border-l-blue-600",
+                      2: "border-l-[5px] border-l-green-500 hover:border-l-green-600",
+                      3: "border-l-[5px] border-l-amber-500 hover:border-l-amber-600",
+                      4: "border-l-[5px] border-l-purple-500 hover:border-l-purple-600",
+                      5: "border-l-[5px] border-l-red-500 hover:border-l-red-600"
+                    };
+
                     return (
-                      <Link to={`/project/${project.id}`} key={project.id}>
-                        <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full ${isStagnant ? "border-orange-300/50" : ""}`}>
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-base">{project.name}</CardTitle>
-                              <div className="flex items-center gap-2">
-                                {isStagnant && <AlertTriangle className="h-4 w-4 text-orange-500" />}
-                                <Badge variant={project.status === "completed" ? "default" : "secondary"} className="text-xs">
+                      <Link to={`/project/${project.id}`} key={project.id} className="block block-link group">
+                        <Card className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 hover:shadow-md transition-all h-full cursor-pointer relative overflow-hidden ${
+                          phaseBorderStyles[project.current_phase] || "border-l-[5px] border-l-blue-500"
+                        } hover:-translate-y-0.5 duration-200`}>
+                          
+                          <CardHeader className="pb-3 pt-4 px-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
+                                  {project.name}
+                                </CardTitle>
+                                {project.description ? (
+                                  <CardDescription className="line-clamp-1 text-[11px] mt-0.5 font-sans leading-relaxed text-slate-400 dark:text-slate-500">
+                                    {project.description}
+                                  </CardDescription>
+                                ) : (
+                                  <span className="text-[11px] text-slate-300 dark:text-slate-700 italic block mt-0.5">Ingen beskrivning angiven</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {isStagnant && (
+                                  <span className="h-2 w-2 rounded-full bg-amber-500 inline-block animate-pulse" title="Stagnerat"></span>
+                                )}
+                                <Badge variant={project.status === "completed" ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0">
                                   {project.status === "active" ? "Aktiv" : "Klar"}
                                 </Badge>
                               </div>
                             </div>
-                            {project.description && (
-                              <CardDescription className="line-clamp-1 text-xs">{project.description}</CardDescription>
-                            )}
                           </CardHeader>
-                          <CardContent className="space-y-3">
-                            {/* Phase progress dots */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm">{phaseData.icon}</span>
-                              <span className="text-xs font-medium">{phaseData.name}</span>
-                              <div className="flex gap-1 ml-auto">
-                                {phases.map(p => (
-                                  <div
-                                    key={p.id}
-                                    className="h-2 w-5 rounded-full"
-                                    style={{
-                                      backgroundColor: p.id <= project.current_phase ? PHASE_COLORS[p.id - 1] : undefined,
-                                    }}
-                                    {...(p.id > project.current_phase ? { className: "h-2 w-5 rounded-full bg-muted" } : { className: "h-2 w-5 rounded-full" })}
-                                  />
-                                ))}
+
+                          <CardContent className="space-y-4 px-4 pb-4">
+                            
+                            {/* Linear tracker for DMAIC Steps */}
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 font-semibold">
+                                  <span>{phaseData.icon}</span>
+                                  <span>Fas: {phaseData.name}</span>
+                                </span>
+                                <span className="font-mono text-slate-400 font-bold text-[10px]">{project.current_phase}/5 Metodik</span>
+                              </div>
+                              
+                              {/* 5 bars indicating completion state */}
+                              <div className="flex gap-1">
+                                {phases.map(p => {
+                                  let bgClass = "bg-slate-100 dark:bg-slate-800/60";
+                                  if (p.id <= project.current_phase) {
+                                    bgClass = p.id === 1 ? "bg-blue-500" 
+                                            : p.id === 2 ? "bg-green-500" 
+                                            : p.id === 3 ? "bg-amber-500" 
+                                            : p.id === 4 ? "bg-purple-500" 
+                                            : "bg-red-500";
+                                  }
+                                  return (
+                                    <div
+                                      key={p.id}
+                                      className={`h-1.5 flex-1 rounded-full ${bgClass}`}
+                                      title={`Fas ${p.id}: ${p.name}`}
+                                    />
+                                  );
+                                })}
                               </div>
                             </div>
 
-                            {/* Tollgate */}
+                            {/* Tollgate Completion State */}
                             {tp && (
-                              <div className="space-y-1">
+                              <div className="space-y-1 bg-slate-50/60 dark:bg-slate-950/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
                                 <div className="flex items-center justify-between text-xs">
-                                  <span className="text-muted-foreground flex items-center gap-1">
-                                    <CheckCircle2 className="h-3 w-3" /> Tollgate
+                                  <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
+                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" /> TOLLGATES
                                   </span>
-                                  <span className="font-mono">{tp.completed}/{tp.total} ({tollgatePercent}%)</span>
+                                  <span className="font-mono font-bold text-[10px] text-slate-600 dark:text-slate-300">{tp.completed} av {tp.total} ({tollgatePercent}%)</span>
                                 </div>
-                                <Progress value={tollgatePercent} className="h-1.5" />
+                                <Progress value={tollgatePercent} className="h-1 bg-slate-100 dark:bg-slate-800" />
                               </div>
                             )}
 
-                            {/* Sigma + Savings row */}
-                            <div className="flex items-center justify-between text-xs">
-                              {latestSigma !== null ? (
-                                <span className="flex items-center gap-1">
-                                  <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                                  <span className="font-mono font-bold">{latestSigma.toFixed(2)}σ</span>
-                                  {firstSigma !== null && latestSigma !== firstSigma && (
-                                    <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                      {latestSigma > firstSigma ? "+" : ""}{(latestSigma - firstSigma).toFixed(2)}
-                                    </Badge>
-                                  )}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">Ingen sigma</span>
-                              )}
-                              {(project.estimated_savings || project.actual_savings) && (
-                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                  <DollarSign className="h-3 w-3" />
-                                  {formatCurrency(project.actual_savings || project.estimated_savings)}
-                                </span>
-                              )}
+                            {/* Sigma + Financial Metrics row */}
+                            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800/40">
+                              
+                              {/* Left side: Sigma info */}
+                              <div>
+                                {latestSigma !== null ? (
+                                  <div className="flex items-center gap-1.5" title="Senaste tillgängliga sigma-språng">
+                                    <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+                                    <span className="font-mono font-extrabold text-xs text-slate-900 dark:text-slate-100">{latestSigma.toFixed(2)}σ</span>
+                                    {firstSigma !== null && latestSigma !== firstSigma && (
+                                      <Badge 
+                                        variant="outline" 
+                                        className={`text-[9px] px-1 py-0 font-bold ${
+                                          latestSigma >= firstSigma 
+                                            ? "text-emerald-600 bg-emerald-50/60 border-emerald-100 dark:text-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-900/50" 
+                                            : "text-red-600 bg-red-50/60 border-red-100 dark:text-red-300 dark:bg-red-950/20 dark:border-red-900/50"
+                                        }`}
+                                      >
+                                        {latestSigma >= firstSigma ? "↑" : "↓"} {(latestSigma - firstSigma).toFixed(1)}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 font-medium">Ej sigma-mätt ännu</span>
+                                )}
+                              </div>
+
+                              {/* Right side: Savings info */}
+                              <div>
+                                {(project.estimated_savings || project.actual_savings) ? (
+                                  <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-extrabold text-xs">
+                                    <Coins className="h-3.5 w-3.5" />
+                                    <span>{formatCurrency(project.actual_savings || project.estimated_savings)}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 font-medium">Inga besparingar</span>
+                                )}
+                              </div>
+
                             </div>
 
-                            {/* FMEA risk indicator */}
-                            {(fmeaByProject[project.id] || []).some(r => r.rpn >= 200) && (
-                              <div className="flex items-center gap-1 text-xs">
-                                <Target className="h-3 w-3 text-destructive" />
-                                <span className="text-destructive font-medium">
-                                  {(fmeaByProject[project.id] || []).filter(r => r.rpn >= 200).length} högrisk-FMEA
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Tools used indicator */}
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{tools.length} verktyg använda</span>
+                            {/* Footer block: Tools and activity logs context */}
+                            <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                              <span className="font-medium bg-slate-50 dark:bg-slate-850 px-2 py-0.5 rounded text-[10px] text-slate-600 dark:text-slate-400">
+                                {tools.length} verktyg anslutna
+                              </span>
                               <span className="flex items-center gap-1">
                                 <CalendarDays className="h-3 w-3" />
-                                {days === 0 ? "Idag" : `${days}d sedan`}
+                                {days === 0 ? "Idag" : `${days} d sedan`}
                               </span>
                             </div>
+
                           </CardContent>
                         </Card>
                       </Link>
                     );
                   })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </section>

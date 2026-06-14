@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Loader2, FileText, Calculator, BarChart3, Save, Download, CheckCircle2, Shield, Users, TrendingUp, Brain, DollarSign, Presentation, Table, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, FileText, Calculator, BarChart3, Save, Download, CheckCircle2, Shield, Users, TrendingUp, Brain, DollarSign, Presentation, Table, Eye, ChevronRight } from "lucide-react";
 import { exportProjectToPDF, exportA3Report } from "@/lib/pdf-export";
 import { exportProjectToPPTX } from "@/lib/pptx-export";
 import { exportProjectToXLSX, exportProjectToCSV } from "@/lib/xlsx-export";
@@ -503,19 +503,11 @@ export default function ProjectDetail() {
               {/* Headline progress bar for overall completion */}
               <Progress value={overallProgress} className="h-2.5 bg-white/20 [&>div]:bg-white" />
 
-              {/* Overall and Phase-by-phase Timeline connector track */}
+              {/* Overall and Phase-by-phase Timeline track without overlapping lines */}
               <div className="relative pt-2">
-                {/* Desktop Connecting Line */}
-                <div className="absolute top-[28px] left-[10%] right-[10%] h-[3px] bg-white/20 hidden md:block rounded-full">
-                  <div 
-                    className="h-full bg-white transition-all duration-300 rounded-full" 
-                    style={{ width: `${Math.max(0, Math.min(100, (project.current_phase - 1) * 25))}%` }}
-                  />
-                </div>
-
                 {/* Grid of Phases representing timeline checkpoints */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 md:gap-4 relative z-10">
-                  {phases.map((phase) => {
+                  {phases.map((phase, index) => {
                     const pct = getPhaseProgress(phase.id);
                     const isActive = phase.id === activePhase;
                     const isCurrentPhase = phase.id === project.current_phase;
@@ -538,6 +530,12 @@ export default function ProjectDetail() {
                           }
                         }}
                       >
+                        {/* Desktop Directional Arrow between phases */}
+                        {index < phases.length - 1 && (
+                          <div className="absolute right-0 translate-x-[50%] top-[36px] translate-y-[-50%] hidden md:flex items-center justify-center text-white/45 z-30 pointer-events-none">
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        )}
                         {/* Circle indicator node with icon */}
                         <div className={cn(
                           "w-12 h-12 rounded-full flex items-center justify-center transition-all border-2 relative z-20",
@@ -749,13 +747,13 @@ export default function ProjectDetail() {
                     {phaseCalculations.map((calc) => (
                       <Card
                         key={calc.id}
-                        className="bg-white dark:bg-slate-920 border-slate-200 dark:border-slate-850 shadow-[0_1px_3px_rgba(0,0,0,0.05)]"
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-[0_1px_3.5px_rgba(0,0,0,0.06)] hover:shadow-md transition-shadow dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
                       >
                         <CardHeader className="pb-2 pt-3 px-3">
                           <div className="flex items-start justify-between">
                             <div>
-                              <CardTitle className="text-xs font-bold leading-tight">{calc.tool_name}</CardTitle>
-                              <CardDescription className="text-[9px] font-mono mt-0.5">
+                              <CardTitle className="text-xs font-bold leading-tight text-slate-900 dark:text-slate-100">{calc.tool_name}</CardTitle>
+                              <CardDescription className="text-[9px] font-mono mt-0.5 text-slate-500 dark:text-slate-400">
                                 {new Date(calc.created_at).toLocaleDateString("sv-SE")}
                               </CardDescription>
                             </div>
@@ -774,8 +772,8 @@ export default function ProjectDetail() {
                             {/* Indata (Inputs) if there are simple/short key-values */}
                             {calc.inputs && typeof calc.inputs === "object" && Object.keys(calc.inputs).length > 0 && (
                               <div className="space-y-1">
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80 block">Indata</span>
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 bg-slate-50/50 dark:bg-slate-900/10 p-2 rounded-md font-mono text-[9px] border border-slate-100 dark:border-slate-900/20">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Indata</span>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 bg-slate-50/50 dark:bg-slate-950/40 p-2 rounded-md font-mono text-[9px] border border-slate-100 dark:border-slate-800/60">
                                   {Object.entries(calc.inputs as Record<string, unknown>)
                                     .filter(([key, val]) => {
                                       // Skip massive arrays or logs to keep the summary card compact
@@ -784,26 +782,26 @@ export default function ProjectDetail() {
                                       return true;
                                     })
                                     .map(([key, value]) => (
-                                      <div key={key} className="flex justify-between border-b border-slate-100/50 dark:border-slate-900/10 py-0.5 last:border-0 truncate">
-                                        <span className="text-muted-foreground truncate font-sans pr-1" title={labelFor(key)}>{labelFor(key)}:</span>
-                                        <span className="font-medium text-slate-700 dark:text-slate-400 text-right truncate">
+                                      <div key={key} className="flex justify-between border-b border-slate-100/50 dark:border-slate-800/20 py-0.5 last:border-0 truncate">
+                                        <span className="text-muted-foreground truncate font-sans pr-1 text-[10px]" title={labelFor(key)}>{labelFor(key)}:</span>
+                                        <span className="font-medium text-slate-700 dark:text-slate-300 text-right truncate text-[10px]">
                                           {formatCalcValue(value)}
                                         </span>
                                       </div>
                                     ))}
-                                </div>
+                               </div>
                               </div>
                             )}
 
                             {/* Resultat (Results) */}
                             {calc.results && typeof calc.results === "object" && Object.keys(calc.results).length > 0 && (
                               <div className="space-y-1">
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/85 block">Resultat</span>
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-md font-mono text-[9px] border border-slate-100 dark:border-slate-900/45">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Resultat</span>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 bg-slate-50 dark:bg-slate-950/60 p-2 rounded-md font-mono text-[9px] border border-slate-100 dark:border-slate-800/80">
                                   {Object.entries(calc.results as Record<string, unknown>).map(([key, value]) => (
-                                    <div key={key} className="flex justify-between border-b border-slate-100/70 dark:border-slate-900/30 py-0.5 last:border-0 truncate">
-                                      <span className="text-muted-foreground truncate font-sans pr-1" title={labelFor(key)}>{labelFor(key)}:</span>
-                                      <span className="font-bold text-slate-800 dark:text-slate-200 text-right truncate">
+                                    <div key={key} className="flex justify-between border-b border-slate-100/70 dark:border-slate-800/50 py-0.5 last:border-0 truncate">
+                                      <span className="text-muted-foreground truncate font-sans pr-1 text-[10px]" title={labelFor(key)}>{labelFor(key)}:</span>
+                                      <span className="font-bold text-slate-800 dark:text-slate-100 text-right truncate text-[10px]">
                                         {formatCalcValue(value)}
                                       </span>
                                     </div>

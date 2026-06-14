@@ -182,7 +182,7 @@ export function ImproveRiskVerificationTool({ toolId = "improve-risk-verificatio
                       value={item.originalRisk}
                       onChange={e => updateItem(item.id, "originalRisk", e.target.value)}
                       placeholder="Vilken risk adresserades?"
-                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                     />
                   </div>
 
@@ -192,7 +192,7 @@ export function ImproveRiskVerificationTool({ toolId = "improve-risk-verificatio
                       value={item.mitigationAction}
                       onChange={e => updateItem(item.id, "mitigationAction", e.target.value)}
                       placeholder="Hur skulle risken minimeras?"
-                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                     />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export function ImproveRiskVerificationTool({ toolId = "improve-risk-verificatio
                     value={item.evidence}
                     onChange={e => updateItem(item.id, "evidence", e.target.value)}
                     placeholder="Beskriv bevis och utfall av åtgärden..."
-                    className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                    className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                   />
                 </div>
 
@@ -213,7 +213,7 @@ export function ImproveRiskVerificationTool({ toolId = "improve-risk-verificatio
                     <select
                       value={item.status}
                       onChange={e => updateItem(item.id, "status", e.target.value)}
-                      className="w-full h-8 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-md px-2 focus:ring-1 focus:ring-slate-400 focus:outline-none text-slate-900 dark:text-slate-100"
+                      className="w-full h-8 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md px-2 focus:ring-1 focus:ring-slate-400 focus:outline-none text-slate-900 dark:text-slate-100"
                     >
                       <option value="Pågående" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Pågående</option>
                       <option value="Verifierad & Mitigerad" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Verifierad & Mitigerad</option>
@@ -228,7 +228,7 @@ export function ImproveRiskVerificationTool({ toolId = "improve-risk-verificatio
                       value={item.verifiedBy}
                       onChange={e => updateItem(item.id, "verifiedBy", e.target.value)}
                       placeholder="Namn / Roll"
-                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                     />
                   </div>
 
@@ -238,7 +238,7 @@ export function ImproveRiskVerificationTool({ toolId = "improve-risk-verificatio
                       value={item.date}
                       onChange={e => updateItem(item.id, "date", e.target.value)}
                       placeholder="åååå-mm-dd"
-                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                      className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                     />
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export function ImproveRiskVerificationTool({ toolId = "improve-risk-verificatio
           value={overarchingResolution}
           onChange={e => setOverarchingResolution(e.target.value)}
           placeholder="Sammanfatta hur riskerna har mitigerats totalt sett..."
-          className="text-xs h-16 resize-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+          className="text-xs h-16 resize-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
         />
       </div>
 

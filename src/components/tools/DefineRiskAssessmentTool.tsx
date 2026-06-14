@@ -176,7 +176,7 @@ export function DefineRiskAssessmentTool({ toolId = "define-risk-assessment", to
                         value={risk.description}
                         onChange={e => updateRisk(risk.id, "description", e.target.value)}
                         placeholder="Vad kan gå fel?"
-                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                       />
                     </div>
 
@@ -186,7 +186,7 @@ export function DefineRiskAssessmentTool({ toolId = "define-risk-assessment", to
                         value={risk.category}
                         onChange={e => updateRisk(risk.id, "category", e.target.value)}
                         placeholder="t.ex. Resurser"
-                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                       />
                     </div>
 
@@ -200,7 +200,7 @@ export function DefineRiskAssessmentTool({ toolId = "define-risk-assessment", to
                         max="5"
                         value={risk.severity}
                         onChange={e => updateRisk(risk.id, "severity", Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
-                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                        className="h-8 text-xs bg-white dark:bg-slate-900text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                       />
                     </div>
 
@@ -214,7 +214,7 @@ export function DefineRiskAssessmentTool({ toolId = "define-risk-assessment", to
                         max="5"
                         value={risk.probability}
                         onChange={e => updateRisk(risk.id, "probability", Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
-                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                       />
                     </div>
 
@@ -233,7 +233,7 @@ export function DefineRiskAssessmentTool({ toolId = "define-risk-assessment", to
                         value={risk.mitigation}
                         onChange={e => updateRisk(risk.id, "mitigation", e.target.value)}
                         placeholder="Hur reducerar vi den här risken?"
-                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                       />
                     </div>
                     <div className="md:col-span-4 space-y-1">
@@ -242,7 +242,7 @@ export function DefineRiskAssessmentTool({ toolId = "define-risk-assessment", to
                         value={risk.responsible}
                         onChange={e => updateRisk(risk.id, "responsible", e.target.value)}
                         placeholder="Vem bär ansvaret?"
-                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+                        className="h-8 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
                       />
                     </div>
                   </div>
@@ -261,7 +261,7 @@ export function DefineRiskAssessmentTool({ toolId = "define-risk-assessment", to
           value={overarchingSummary}
           onChange={e => setOverarchingSummary(e.target.value)}
           placeholder="Sammanfatta projektets riskprofil och eventuella kritiska åtgärder som kräver ledningsstöd..."
-          className="text-xs h-16 resize-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-850"
+          className="text-xs h-16 resize-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800"
         />
       </div>
 
