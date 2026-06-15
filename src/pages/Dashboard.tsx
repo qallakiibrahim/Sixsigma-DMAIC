@@ -52,8 +52,25 @@ interface FMEARisk {
 
 const PHASE_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ef4444"];
 
-function daysSince(dateStr: string): number {
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+function parseSafeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return val;
+  if (typeof val === "string") return new Date(val);
+  if (typeof val === "number") return new Date(val);
+  if (typeof val === "object") {
+    if (typeof val.toDate === "function") {
+      return val.toDate();
+    }
+    if (val.seconds !== undefined) {
+      return new Date(val.seconds * 1000);
+    }
+  }
+  return new Date(val);
+}
+
+function daysSince(dateStr: any): number {
+  const d = parseSafeDate(dateStr);
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function formatCurrency(val: number | null): string {
@@ -64,6 +81,7 @@ function formatCurrency(val: number | null): string {
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tollgateProgress, setTollgateProgress] = useState<Record<string, TollgateProgress>>({});
+  const [allTollgateItems, setAllTollgateItems] = useState<any[]>([]);
   const [sigmaData, setSigmaData] = useState<SigmaEntry[]>([]);
   const [toolsUsed, setToolsUsed] = useState<Record<string, string[]>>({});
   const [fmeaRisks, setFmeaRisks] = useState<FMEARisk[]>([]);
@@ -103,10 +121,11 @@ export default function Dashboard() {
       // Tollgate progress
       const { data: tollgateData } = await supabase
         .from("tollgate_items")
-        .select("project_id, is_completed")
+        .select("project_id, phase, is_completed")
         .in("project_id", ids);
 
       if (tollgateData) {
+        setAllTollgateItems(tollgateData);
         const progress: Record<string, TollgateProgress> = {};
         tollgateData.forEach(item => {
           if (!progress[item.project_id]) progress[item.project_id] = { completed: 0, total: 0 };
@@ -156,12 +175,33 @@ export default function Dashboard() {
   };
 
   // Derived stats
-  const activeProjects = projects.filter(p => !p.status || p.status.toLowerCase() === "active");
-  const completedProjects = projects.filter(p => p.status?.toLowerCase() === "completed");
+  const activeProjects = projects.filter(p => {
+    const statusLower = (p.status || "active").toLowerCase();
+    return statusLower === "active" || statusLower === "aktiv" || statusLower === "pågående" || statusLower === "ongoing";
+  });
+  const completedProjects = projects.filter(p => {
+    const statusLower = p.status?.toLowerCase();
+    return statusLower === "completed" || statusLower === "slutförd" || statusLower === "klar";
+  });
   const stagnantProjects = activeProjects.filter(p => daysSince(p.updated_at) > 14);
-  const totalEstimatedSavings = projects.reduce((sum, p) => sum + (p.estimated_savings || 0), 0);
-  const totalActualSavings = projects.reduce((sum, p) => sum + (p.actual_savings || 0), 0);
-  const highRiskFmea = fmeaRisks.filter(r => r.rpn >= 200);
+  const totalEstimatedSavings = projects
+    .filter(p => {
+      const s = p.status?.toLowerCase();
+      return s !== "archived" && s !== "arkiverad";
+    })
+    .reduce((sum, p) => sum + (p.estimated_savings || 0), 0);
+  const totalActualSavings = projects
+    .filter(p => {
+      const s = p.status?.toLowerCase();
+      return s !== "archived" && s !== "arkiverad";
+    })
+    .reduce((sum, p) => sum + (p.actual_savings || 0), 0);
+  const highRiskFmea = fmeaRisks.filter(r => {
+    const proj = projects.find(p => p.id === r.project_id);
+    if (!proj) return false;
+    const s = proj.status?.toLowerCase();
+    return s !== "archived" && s !== "arkiverad" && r.rpn >= 200;
+  });
   const fmeaByProject = fmeaRisks.reduce<Record<string, FMEARisk[]>>((acc, r) => {
     if (!acc[r.project_id]) acc[r.project_id] = [];
     acc[r.project_id].push(r);
@@ -175,21 +215,30 @@ export default function Dashboard() {
     const projectStatus = p.status || "active";
     const matchesStatus = statusFilter === "all" || projectStatus.toLowerCase() === statusFilter.toLowerCase();
     
-    const projectPhase = p.current_phase || 1;
-    const matchesPhase = phaseFilter === "all" || projectPhase === phaseFilter;
+    const projectPhase = Number(p.current_phase) || 1;
+    const matchesPhase = phaseFilter === "all" || projectPhase === Number(phaseFilter);
     return matchesSearch && matchesStatus && matchesPhase;
   });
 
+  const TRANSLATED_PHASES: Record<string, string> = {
+    "Define": "Definiera",
+    "Measure": "Mäta",
+    "Analyze": "Analysera",
+    "Improve": "Förbättra",
+    "Control": "Styra"
+  };
+
   // Phase distribution for bar chart
   const phaseDistData = phases.map(phase => ({
-    name: phase.name,
+    name: TRANSLATED_PHASES[phase.name] || phase.name,
+    englishName: phase.name,
     icon: phase.icon,
-    count: activeProjects.filter(p => (p.current_phase || 1) === phase.id).length,
+    count: activeProjects.filter(p => (Number(p.current_phase) || 1) === phase.id).length,
   }));
 
   // Sigma trend (all projects combined, chronological)
   const sigmaTrendData = sigmaData.map(s => ({
-    date: new Date(s.measurement_date).toLocaleDateString("sv-SE"),
+    date: parseSafeDate(s.measurement_date).toLocaleDateString("sv-SE"),
     sigma: Number(s.sigma_level),
   }));
 
@@ -217,7 +266,7 @@ export default function Dashboard() {
         <div className="bg-white/95 dark:bg-slate-950/95 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-lg backdrop-blur-md text-xs">
           <p className="font-semibold text-slate-950 dark:text-slate-100 mb-1">{label}</p>
           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-            Antal aktiva: <span className="text-blue-600 dark:text-blue-400 font-mono text-sm">{payload[0].value} par</span>
+            Antal aktiva: <span className="text-blue-600 dark:text-blue-400 font-mono text-sm">{payload[0].value} st</span>
           </p>
         </div>
       );
@@ -235,9 +284,9 @@ export default function Dashboard() {
       return months;
     }
 
-    const startDates = filteredProjects.map(p => new Date(p.created_at).getTime());
+    const startDates = filteredProjects.map(p => parseSafeDate(p.created_at).getTime());
     const minTime = Math.min(...startDates);
-    const earliestDate = new Date(minTime);
+    const earliestDate = parseSafeDate(minTime);
 
     const timelineStartMon = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
 
@@ -254,14 +303,21 @@ export default function Dashboard() {
   const timelineEndMs = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0).getTime();
   const totalTimelineRangeMs = Math.max(1, timelineEndMs - timelineStartMs);
 
+  const getGanttTodayLineLeft = () => {
+    const todayMs = Date.now();
+    if (todayMs < timelineStartMs || todayMs > timelineEndMs) return null;
+    const percent = ((todayMs - timelineStartMs) / totalTimelineRangeMs) * 100;
+    return `${Math.max(0, Math.min(100, percent))}%`;
+  };
+
   const getGanttBarPosition = (proj: Project) => {
-    const startMs = new Date(proj.created_at).getTime();
+    const startMs = parseSafeDate(proj.created_at).getTime();
     // Assuming a progressive default standard duration of 16 weeks (112 days)
     const durationMs = 112 * 24 * 60 * 60 * 1000;
     let endMs = startMs + durationMs;
 
-    if (proj.status === "completed" && new Date(proj.updated_at).getTime() > startMs) {
-      endMs = new Date(proj.updated_at).getTime();
+    if (proj.status === "completed" && parseSafeDate(proj.updated_at).getTime() > startMs) {
+      endMs = parseSafeDate(proj.updated_at).getTime();
     }
 
     const leftPercent = ((startMs - timelineStartMs) / totalTimelineRangeMs) * 100;
@@ -273,8 +329,8 @@ export default function Dashboard() {
     return {
       left: `${clampedLeft}%`,
       width: `${clampedWidth}%`,
-      startDate: new Date(startMs).toLocaleDateString("sv-SE", { month: "short", day: "numeric" }),
-      endDate: new Date(endMs).toLocaleDateString("sv-SE", { month: "short", day: "numeric" }),
+      startDate: parseSafeDate(startMs).toLocaleDateString("sv-SE", { month: "short", day: "numeric" }),
+      endDate: parseSafeDate(endMs).toLocaleDateString("sv-SE", { month: "short", day: "numeric" }),
     };
   };
 
@@ -357,16 +413,26 @@ export default function Dashboard() {
 
               {/* Card 4: Besparingar */}
               <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/60 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-indigo-200 dark:hover:border-indigo-900/40 transition-all group col-span-1 md:col-span-1">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
                     <Coins className="h-5 w-5" />
                   </div>
                   <Badge variant="outline" className="text-[9px] text-indigo-600 border-indigo-100 dark:text-indigo-300 dark:border-indigo-950/60">SEK</Badge>
                 </div>
-                <div className="text-xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-400 truncate" title={formatCurrency(totalActualSavings || totalEstimatedSavings)}>
-                  {formatCurrency(totalActualSavings || totalEstimatedSavings)}
+                <div className="text-xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-400 truncate" title={`Faktisk: ${formatCurrency(totalActualSavings)} | Uppskattad: ${formatCurrency(totalEstimatedSavings)}`}>
+                  {formatCurrency(totalActualSavings + totalEstimatedSavings)}
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">Ackumulerad besparing</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium mb-1">Besparingskalkyl (Totalt)</p>
+                <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 border-t border-slate-50 dark:border-slate-800/30 pt-1.5">
+                  <div className="flex justify-between items-center">
+                    <span>Faktisk besparing:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{formatCurrency(totalActualSavings)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Mål/Uppskattad:</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono">{formatCurrency(totalEstimatedSavings)}</span>
+                  </div>
+                </div>
               </div>
 
               {/* Card 5: RPN Risk */}
@@ -433,7 +499,7 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="h-52 pt-2">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={180}>
                     <BarChart data={phaseDistData} margin={{ top: 10, right: 10, bottom: 0, left: -25 }}>
                       <CartesianGrid strokeDasharray="3 3" className="opacity-10 dark:opacity-5" vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
@@ -441,11 +507,25 @@ export default function Dashboard() {
                       <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
                       <Bar dataKey="count" radius={[5, 5, 0, 0]} barSize={34}>
                         {phaseDistData.map((_, i) => (
-                          <Cell key={i} fill={PHASE_COLORS[i]} />
+                          <Cell key={i} fill={PHASE_COLORS[i] || "#3b82f6"} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+
+                {/* Clean horizontal mini-legend / list with active count per phase for 100% readability */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/40">
+                  {phaseDistData.map((phaseData, i) => (
+                    <div key={i} className="flex flex-col items-center p-2 rounded-xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/40">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate w-full text-center">
+                        {phaseData.name}
+                      </span>
+                      <span className="text-sm font-bold mt-1 font-mono" style={{ color: PHASE_COLORS[i] || "#3b82f6" }}>
+                        {phaseData.count} {phaseData.count === 1 ? "aktiv" : "aktiva"}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -676,8 +756,37 @@ export default function Dashboard() {
                   {filteredProjects.map(project => {
                     const activePhaseNum = project.current_phase || 1;
                     const phaseData = phases.find(p => p.id === activePhaseNum) || phases[0];
-                    const tp = tollgateProgress[project.id];
-                    const tollgatePercent = tp ? Math.round((tp.completed / tp.total) * 100) : 0;
+                    const defaultItemsPerPhase = 7;
+                    const isCompleted = project.status?.toLowerCase() === "completed";
+
+                    // Compute progress calculations
+                    const projectItems = allTollgateItems.filter(item => item.project_id === project.id);
+                    const activePhaseItems = projectItems.filter(item => item.phase === activePhaseNum);
+
+                    const activePhaseCompleted = activePhaseItems.length > 0 
+                      ? activePhaseItems.filter(item => item.is_completed).length 
+                      : 0;
+                    const activePhaseTotal = activePhaseItems.length > 0 
+                      ? activePhaseItems.length 
+                      : defaultItemsPerPhase;
+
+                    const activePhasePercent = activePhaseTotal > 0 
+                      ? Math.round((activePhaseCompleted / activePhaseTotal) * 100) 
+                      : 0;
+
+                    const getPhaseProgress = (phaseId: number) => {
+                      const phaseItems = projectItems.filter(item => item.phase === phaseId);
+                      if (phaseItems.length === 0) {
+                        return phaseId < activePhaseNum ? 100 : 0;
+                      }
+                      const completed = phaseItems.filter(item => item.is_completed).length;
+                      return Math.round((completed / phaseItems.length) * 100);
+                    };
+
+                    const overallProgressPercent = isCompleted ? 100 : Math.round(
+                      [1, 2, 3, 4, 5].reduce((sum, pId) => sum + getPhaseProgress(pId), 0) / 5
+                    );
+
                     const projectSigma = sigmaData.filter(s => s.project_id === project.id);
                     const latestSigma = projectSigma.length > 0 ? Number(projectSigma[projectSigma.length - 1].sigma_level) : null;
                     const firstSigma = projectSigma.length > 0 ? Number(projectSigma[0].sigma_level) : null;
@@ -685,8 +794,9 @@ export default function Dashboard() {
                     const expectedCount = expectedToolsPerPhase[activePhaseNum] || 10;
                     const toolMaturityPercent = Math.min(100, Math.round((tools.length / expectedCount) * 100));
                     const days = daysSince(project.updated_at);
-                    const isCompleted = project.status?.toLowerCase() === "completed";
                     const isStagnant = !isCompleted && days > 14;
+                    const projectFmea = fmeaByProject[project.id] || [];
+                    const hasCriticalFmea = projectFmea.some(r => r.rpn >= 200);
 
                     // Compute dynamic left border color depending on current active phase
                     const phaseBorderStyles: Record<number, string> = {
@@ -763,17 +873,32 @@ export default function Dashboard() {
                             </div>
 
                             {/* Tollgate Completion State */}
-                            {tp && (
-                              <div className="space-y-1 bg-slate-50/60 dark:bg-slate-950/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
-                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" /> TOLLGATES
-                                  </span>
-                                  <span className="font-mono font-bold text-[10px] text-slate-600 dark:text-slate-300">{tp.completed} av {tp.total} ({tollgatePercent}%)</span>
-                                </div>
-                                <Progress value={tollgatePercent} className="h-1 bg-slate-100 dark:bg-slate-800" />
+                            <div className="space-y-1.5 bg-slate-50/60 dark:bg-slate-950/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-500" /> TOLLGATES (AKTIV FAS)
+                                </span>
+                                <span className="font-mono font-bold text-[10px] text-slate-600 dark:text-slate-300">{activePhaseCompleted} av {activePhaseTotal} ({activePhasePercent}%)</span>
                               </div>
-                            )}
+                              <Progress value={activePhasePercent} className="h-1 bg-slate-100/50 dark:bg-slate-800" />
+                              
+                              <div className="flex items-center justify-between text-[10px] pt-1 text-slate-400 border-t border-slate-100/20 mt-1 dark:border-slate-800/40">
+                                <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">Totalmål (Alla faser):</span>
+                                <span className="font-semibold text-slate-500 dark:text-slate-300">{overallProgressPercent}%</span>
+                              </div>
+                              <Progress value={overallProgressPercent} className="h-1 bg-slate-100/50 dark:bg-slate-800" />
+
+                              {activePhasePercent === 100 && !isCompleted && (
+                                <div className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-955/10 px-2 py-1.5 rounded-lg border border-amber-100/50 dark:border-amber-900/30 flex items-start gap-1 leading-normal">
+                                  <span className="animate-pulse h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0 mt-1" />
+                                  <span>
+                                    {activePhaseNum === 5 
+                                      ? "Redo att slutföras! Öppna projektet för att stänga sista fasen och avsluta projektet."
+                                      : `Fasen klar! Öppna projektet för att godkänna & flytta till Fas ${activePhaseNum + 1}.`}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
 
                             {/* Sigma + Financial Metrics row */}
                             <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800/40">
@@ -804,10 +929,21 @@ export default function Dashboard() {
 
                               {/* Right side: Savings info */}
                               <div>
-                                {(project.estimated_savings || project.actual_savings) ? (
-                                  <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-extrabold text-xs">
-                                    <Coins className="h-3.5 w-3.5" />
-                                    <span>{formatCurrency(project.actual_savings || project.estimated_savings)}</span>
+                                {project.actual_savings != null ? (
+                                  <div className="flex flex-col text-right">
+                                    <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-extrabold text-xs justify-end">
+                                      <Coins className="h-3.5 w-3.5" />
+                                      <span>{formatCurrency(project.actual_savings)}</span>
+                                    </div>
+                                    <span className="text-[9px] text-slate-400 font-medium">Faktisk besparing</span>
+                                  </div>
+                                ) : project.estimated_savings != null ? (
+                                  <div className="flex flex-col text-right">
+                                    <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-extrabold text-xs justify-end">
+                                      <Coins className="h-3.5 w-3.5" />
+                                      <span>{formatCurrency(project.estimated_savings)}</span>
+                                    </div>
+                                    <span className="text-[9px] text-slate-400 font-medium">Målbesparing</span>
                                   </div>
                                 ) : (
                                   <span className="text-[10px] text-slate-400 font-medium">Inga besparingar</span>
@@ -818,9 +954,16 @@ export default function Dashboard() {
 
                             {/* Footer block: Tools and activity logs context */}
                             <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-                              <span className="font-medium bg-slate-50 dark:bg-slate-850 px-2 py-0.5 rounded text-[10px] text-slate-600 dark:text-slate-400">
-                                {tools.length} verktyg anslutna
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold bg-slate-50 dark:bg-slate-850 px-2 py-0.5 rounded text-[10px] text-slate-600 dark:text-slate-400">
+                                  {tools.length} verktyg
+                                </span>
+                                {hasCriticalFmea && (
+                                  <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider text-rose-500 bg-rose-50 dark:bg-rose-950/25 border border-rose-100 dark:border-rose-950/50" title="Projektet har kritiska FMEA-risker!">
+                                    <AlertTriangle className="h-2.5 w-2.5 shrink-0 animate-pulse" /> RPN-RISK
+                                  </span>
+                                )}
+                              </div>
                               <span className="flex items-center gap-1">
                                 <CalendarDays className="h-3 w-3" />
                                 {days === 0 ? "Idag" : `${days} d sedan`}
@@ -891,7 +1034,7 @@ export default function Dashboard() {
                                 </div>
                                 
                                 <div className="text-[9px] text-slate-400 dark:text-slate-500 font-mono tracking-tight flex items-center gap-1.5">
-                                  <span>Start: {new Date(project.created_at).toLocaleDateString("sv-SE")}</span>
+                                  <span>Start: {parseSafeDate(project.created_at).toLocaleDateString("sv-SE")}</span>
                                   <span>•</span>
                                   <span className={isStagnant ? "text-amber-500 dark:text-amber-400 font-semibold" : ""}>
                                     {days === 0 ? "Aktiv idag" : `${days} d sedan`}
@@ -909,6 +1052,22 @@ export default function Dashboard() {
                                   ))}
                                 </div>
 
+                                {/* Today indicator vertical line */}
+                                {(() => {
+                                  const todayLeft = getGanttTodayLineLeft();
+                                  if (!todayLeft) return null;
+                                  return (
+                                    <div 
+                                      className="absolute top-0 bottom-0 w-0.5 pointer-events-none z-10"
+                                      style={{ left: todayLeft }}
+                                    >
+                                      <div className="h-full border-l border-dashed border-rose-500/85 dark:border-rose-400/85 relative">
+                                        <span className="absolute -top-1.5 left-1.5 bg-rose-500 dark:bg-rose-400 text-[8px] text-white px-1 py-0.2 rounded font-sans font-bold scale-90 select-none shadow-[0_1px_3px_rgba(0,0,0,0.1)]">IDAG</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
                                 {/* Gantt Progressive Row Bar */}
                                 <div 
                                   className={`absolute h-9 rounded-xl flex items-center p-0.5 overflow-hidden transition-all group/gantt hover:scale-[1.01] border ${
@@ -922,7 +1081,7 @@ export default function Dashboard() {
                                   <div className="flex w-full h-full gap-0.5">
                                     {[1, 2, 3, 4, 5].map((idx) => {
                                       const isCurrent = idx === activePhaseNum;
-                                      const isPastOrCurrent = idx <= activePhaseNum;
+                                      const isPastOrCurrent = isCompleted || idx <= activePhaseNum;
                                       
                                       // Elegant muted tones for completed projects, active vivid colors for live ones
                                       let phaseColor = PHASE_COLORS[idx - 1];
@@ -937,9 +1096,15 @@ export default function Dashboard() {
                                             isCurrent && !isCompleted
                                               ? "shadow-[0_1px_4px_rgba(59,130,246,0.3)] saturate-125 z-10 font-bold" 
                                               : ""
+                                          } ${
+                                            !isPastOrCurrent 
+                                              ? "border border-dashed border-slate-200/40 dark:border-slate-800/40" 
+                                              : ""
                                           }`}
                                           style={{ 
-                                            backgroundColor: isPastOrCurrent ? phaseColor : "transparent"
+                                            backgroundColor: isPastOrCurrent 
+                                              ? phaseColor 
+                                              : "rgba(148, 163, 184, 0.08)"
                                           }}
                                         >
                                           {/* Text indicator */}

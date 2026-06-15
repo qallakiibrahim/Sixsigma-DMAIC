@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Loader2, FileText, Calculator, BarChart3, Save, Download, CheckCircle2, Shield, Users, TrendingUp, Brain, DollarSign, Presentation, Table, Eye, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, FileText, Calculator, BarChart3, Save, Download, CheckCircle2, Shield, Users, TrendingUp, Brain, DollarSign, Presentation, Table, Eye, ChevronRight, Pencil } from "lucide-react";
 import { exportProjectToPDF, exportA3Report } from "@/lib/pdf-export";
 import { exportProjectToPPTX } from "@/lib/pptx-export";
 import { exportProjectToXLSX, exportProjectToCSV } from "@/lib/xlsx-export";
@@ -94,18 +94,27 @@ const KEY_LABELS: Record<string, string> = {
   highRisksCount: "Antal allvarliga risker (RPN ≥ 15)",
   mediumRisksCount: "Antal medelstora risker (RPN 8-14)",
   averageRiskScore: "Genomsnittligt riskindex (RPN)",
+  studyVarPercent: "Mätsystemvariation (% SV)",
+  percentRR: "Repeterbarhet & Reproducerbarhet (%R&R)",
+  percentPart: "Partsvariation (%PV)",
+  withinPct: "Inom enhet variation (%)",
+  betweenPct: "Mellan enheter variation (%)",
+  temporalPct: "Tidsberoende variation (%)",
 };
 
 function labelFor(key: string): string {
   return KEY_LABELS[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
 }
 
-function formatCalcValue(val: unknown): string {
+function formatCalcValue(val: unknown, key?: string): string {
   if (val === null || val === undefined) return "–";
   if (typeof val === "boolean") return val ? "Ja" : "Nej";
   if (typeof val === "number") {
-    if (Number.isInteger(val)) return String(val);
-    return val.toFixed(3).replace(/\.?0+$/, "");
+    const formattedNum = Number.isInteger(val) ? String(val) : val.toFixed(2).replace(/\.?0+$/, "");
+    if (key && (key.toLowerCase().includes("percent") || key.toLowerCase().includes("pct") || key.toLowerCase() === "yield")) {
+      return `${formattedNum}%`;
+    }
+    return formattedNum;
   }
   if (Array.isArray(val)) {
     if (val.length === 0) return "Tom lista";
@@ -118,7 +127,7 @@ function formatCalcValue(val: unknown): string {
     const entries = Object.entries(val as Record<string, unknown>);
     if (entries.length === 0) return "–";
     if (entries.every(([, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean" || v === null)) {
-      return entries.map(([k, v]) => `${labelFor(k)}: ${v === null ? "–" : typeof v === "boolean" ? (v ? "Ja" : "Nej") : v}`).join(", ");
+      return entries.map(([k, v]) => `${labelFor(k)}: ${v === null ? "–" : typeof v === "boolean" ? (v ? "Ja" : "Nej") : formatCalcValue(v, k)}`).join(", ");
     }
     return `${entries.length} parametrar`;
   }
@@ -132,6 +141,22 @@ function getCalculationPhase(calc: { phase: number | null | undefined; tool_id: 
   // Fallback: search which phase contains the tool with this tool_id
   const foundPhase = phases.find((p) => p.tools.some((t) => t.id === calc.tool_id));
   return foundPhase ? foundPhase.id : 1; // Default to phase 1 (Define) if not found
+}
+
+function parseSafeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return val;
+  if (typeof val === "string") return new Date(val);
+  if (typeof val === "number") return new Date(val);
+  if (typeof val === "object") {
+    if (typeof val.toDate === "function") {
+      return val.toDate();
+    }
+    if (val.seconds !== undefined) {
+      return new Date(val.seconds * 1000);
+    }
+  }
+  return new Date(val);
 }
 
 export default function ProjectDetail() {
@@ -151,6 +176,53 @@ export default function ProjectDetail() {
   const [isSaving, setIsSaving] = useState(false);
   const [expandedToolId, setExpandedToolId] = useState<string | null>(null);
   const { user, loading } = useAuth();
+
+  // Project edit state hooks
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editEstimatedSavings, setEditEstimatedSavings] = useState("");
+  const [editActualSavings, setEditActualSavings] = useState("");
+  const [editStatus, setEditStatus] = useState("active");
+
+  const handleOpenEditDialog = () => {
+    if (!project) return;
+    setEditName(project.name || "");
+    setEditDescription(project.description || "");
+    setEditEstimatedSavings(project.estimated_savings != null ? String(project.estimated_savings) : "");
+    setEditActualSavings(project.actual_savings != null ? String(project.actual_savings) : "");
+    setEditStatus(project.status || "active");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateProject = async () => {
+    if (!editName.trim()) {
+      toast({ title: "Ange ett projektnamn", variant: "destructive" });
+      return;
+    }
+
+    setIsSaving(true);
+    const { error } = await supabase
+      .from("projects")
+      .update({
+        name: editName.trim(),
+        description: editDescription.trim() || null,
+        estimated_savings: editEstimatedSavings ? Number(editEstimatedSavings) : null,
+        actual_savings: editActualSavings ? Number(editActualSavings) : null,
+        status: editStatus,
+      })
+      .eq("id", projectId!);
+
+    setIsSaving(false);
+
+    if (error) {
+      toast({ title: "Kunde inte spara projektet", variant: "destructive" });
+    } else {
+      toast({ title: "Projektet har uppdaterats!" });
+      setIsEditDialogOpen(false);
+      fetchProjectData();
+    }
+  };
 
   useEffect(() => {
     setExpandedToolId(null);
@@ -404,8 +476,21 @@ export default function ProjectDetail() {
             Tillbaka till projekt
           </Link>
           <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{project.name}</h1>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                <h1 className="text-3xl font-bold truncate">{project.name}</h1>
+                {project.user_id === user?.id && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:text-white bg-white/10 hover:bg-white/20 border-white/20 rounded-full shrink-0"
+                    onClick={handleOpenEditDialog}
+                    title="Redigera projektinställningar"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               {project.description && (
                 <p className="text-white/80">{project.description}</p>
               )}
@@ -698,7 +783,7 @@ export default function ProjectDetail() {
                             <div>
                               <CardTitle className="text-lg">{note.title}</CardTitle>
                               <CardDescription>
-                                {new Date(note.created_at).toLocaleDateString("sv-SE")}
+                                {parseSafeDate(note.created_at).toLocaleDateString("sv-SE")}
                               </CardDescription>
                             </div>
                             <Button
@@ -754,7 +839,7 @@ export default function ProjectDetail() {
                             <div>
                               <CardTitle className="text-xs font-bold leading-tight text-slate-900 dark:text-slate-100">{calc.tool_name}</CardTitle>
                               <CardDescription className="text-[9px] font-mono mt-0.5 text-slate-500 dark:text-slate-400">
-                                {new Date(calc.created_at).toLocaleDateString("sv-SE")}
+                                {parseSafeDate(calc.created_at).toLocaleDateString("sv-SE")}
                               </CardDescription>
                             </div>
                             <Button
@@ -785,7 +870,7 @@ export default function ProjectDetail() {
                                       <div key={key} className="flex justify-between border-b border-slate-100/50 dark:border-slate-800/20 py-0.5 last:border-0 truncate">
                                         <span className="text-muted-foreground truncate font-sans pr-1 text-[10px]" title={labelFor(key)}>{labelFor(key)}:</span>
                                         <span className="font-medium text-slate-700 dark:text-slate-300 text-right truncate text-[10px]">
-                                          {formatCalcValue(value)}
+                                          {formatCalcValue(value, key)}
                                         </span>
                                       </div>
                                     ))}
@@ -802,7 +887,7 @@ export default function ProjectDetail() {
                                     <div key={key} className="flex justify-between border-b border-slate-100/70 dark:border-slate-800/50 py-0.5 last:border-0 truncate">
                                       <span className="text-muted-foreground truncate font-sans pr-1 text-[10px]" title={labelFor(key)}>{labelFor(key)}:</span>
                                       <span className="font-bold text-slate-800 dark:text-slate-100 text-right truncate text-[10px]">
-                                        {formatCalcValue(value)}
+                                        {formatCalcValue(value, key)}
                                       </span>
                                     </div>
                                   ))}
@@ -863,6 +948,10 @@ export default function ProjectDetail() {
                   projectId={project.id}
                   phase={activePhase}
                   isEditor={project.user_id === user?.id}
+                  onPhaseApproved={(newPhase) => {
+                    setActivePhase(newPhase);
+                    fetchProjectData();
+                  }}
                 />
               </TabsContent>
 
@@ -895,6 +984,84 @@ export default function ProjectDetail() {
       </section>
 
       <AIDMAICCoach projectId={project.id} projectName={project.name} />
+
+      {/* Edit Project Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">Redigera projektuppgifter</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4 text-slate-900 dark:text-slate-100">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name" className="text-sm font-semibold">Projektnamn</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Ange projektnamn"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-desc" className="text-sm font-semibold">Beskrivning</Label>
+              <Textarea
+                id="edit-desc"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Beskriv projektets syfte och omfattning..."
+                rows={3}
+                className="w-full"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-estimated" className="text-sm font-semibold">Målbesparing (SEK)</Label>
+                <Input
+                  id="edit-estimated"
+                  type="number"
+                  value={editEstimatedSavings}
+                  onChange={(e) => setEditEstimatedSavings(e.target.value)}
+                  placeholder="T.ex. 500000"
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-actual" className="text-sm font-semibold">Faktisk besparing (SEK)</Label>
+                <Input
+                  id="edit-actual"
+                  type="number"
+                  value={editActualSavings}
+                  onChange={(e) => setEditActualSavings(e.target.value)}
+                  placeholder="T.ex. 450000"
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-status" className="text-sm font-semibold">Projektstatus</Label>
+              <select
+                id="edit-status"
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="active">Aktiv</option>
+                <option value="completed">Slutförd</option>
+                <option value="archived">Arkiverad</option>
+              </select>
+            </div>
+            <div className="flex gap-3 justify-end pt-4">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} type="button">
+                Avbryt
+              </Button>
+              <Button onClick={handleUpdateProject} disabled={isSaving} className="gap-2">
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                Spara ändringar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

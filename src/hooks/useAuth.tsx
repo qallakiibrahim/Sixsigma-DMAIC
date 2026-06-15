@@ -19,20 +19,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let hasFired = false;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        hasFired = true;
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session as backup, but don't force loading to false prematurely in live Firebase mode
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      if (!hasFired) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        // Only set loading to false here if a session exists, or if we are local sandbox mode
+        if (session || localStorage.getItem("dmaic_local_mode") === "true") {
+          setLoading(false);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();

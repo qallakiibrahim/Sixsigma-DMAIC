@@ -24,14 +24,20 @@ const getGeminiClient = () => {
   });
 };
 
-// Robust helper to execute content generation with a prioritized list of fallback models on transient 503/429/500 errors
+// Robust helper to execute content generation with a prioritized list of fallback models
 async function generateContentWithFallback(aiClient: any, options: {
   contents: string;
   systemInstruction?: string;
   responseMimeType?: string;
   responseSchema?: any;
 }) {
-  const modelsToTry = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview"];
+  const modelsToTry = [
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-3.1-pro-preview"
+  ];
   let lastError: any = null;
 
   for (let i = 0; i < modelsToTry.length; i++) {
@@ -49,20 +55,15 @@ async function generateContentWithFallback(aiClient: any, options: {
       });
       return response;
     } catch (error: any) {
-      const isTransient = error.status === 503 || error.status === 429 || error.status === 500 || 
-                          String(error).includes("503") || String(error).includes("429") || String(error).includes("UNAVAILABLE") || String(error).includes("ResourceExhausted") || String(error).includes("high demand");
-      
       const errorMessage = error?.message || String(error);
-      console.log(`[Gemini Client] Note: model ${currentModel} returned status: ${error?.status || "unknown"}, message: "${errorMessage.substring(0, 150)}"`);
-      lastError = error;
+      const statusCode = error?.status || error?.statusCode || error?.code || "unknown";
       
-      if (!isTransient && i === 0) {
-        throw error;
-      }
+      console.log(`[Gemini Client] Note: model ${currentModel} failed (status: ${statusCode}), message: "${errorMessage.substring(0, 150)}"`);
+      lastError = error;
 
       if (i < modelsToTry.length - 1) {
-        const sleepMs = 800 * (i + 1);
-        console.log(`[Gemini Client] Dynamic retry: backing off for ${sleepMs}ms before trying next model: ${modelsToTry[i + 1]}`);
+        const sleepMs = 400 * (i + 1);
+        console.log(`[Gemini Client] Retrying next fallback model: ${modelsToTry[i + 1]} in ${sleepMs}ms...`);
         await new Promise(resolve => setTimeout(resolve, sleepMs));
       }
     }

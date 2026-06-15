@@ -93,6 +93,7 @@ interface TollgateChecklistProps {
   projectId: string;
   phase: number;
   isEditor?: boolean;
+  onPhaseApproved?: (newPhase: number, isCompleted: boolean) => void;
 }
 
 interface CriterionReview {
@@ -109,7 +110,7 @@ interface AISolutionReview {
   criterionAssessments: CriterionReview[];
 }
 
-export function TollgateChecklist({ projectId, phase, isEditor = true }: TollgateChecklistProps) {
+export function TollgateChecklist({ projectId, phase, isEditor = true, onPhaseApproved }: TollgateChecklistProps) {
   const [items, setItems] = useState<TollgateItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newTitle, setNewTitle] = useState("");
@@ -121,6 +122,7 @@ export function TollgateChecklist({ projectId, phase, isEditor = true }: Tollgat
   const [reviewResult, setReviewResult] = useState<AISolutionReview | null>(null);
   const [historyReviews, setHistoryReviews] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showManualApproveConfirm, setShowManualApproveConfirm] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -379,10 +381,15 @@ export function TollgateChecklist({ projectId, phase, isEditor = true }: Tollgat
           : `Fasen har godkänts officiellt! Projektet flyttades till fas ${nextPhase} (${phases.find(p => p.id === nextPhase)?.name || ""})`
       );
       setIsDialogOpen(false);
-      // Reload page context to update calculations
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      
+      if (onPhaseApproved) {
+        onPhaseApproved(isFinalPhase ? 5 : nextPhase, isFinalPhase);
+      } else {
+        // Reload page context to update calculations as a backup reload fallback
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
     } else {
       toast.error("Kunde inte uppdatera projektets fas.");
     }
@@ -416,7 +423,7 @@ export function TollgateChecklist({ projectId, phase, isEditor = true }: Tollgat
               )}
               Tollgate: {phaseData?.name}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={progress === 100 ? "default" : "secondary"}>
                 {completed}/{total} ({progress}%)
               </Badge>
@@ -442,6 +449,19 @@ export function TollgateChecklist({ projectId, phase, isEditor = true }: Tollgat
                 )}
               </Button>
 
+              {/* Manual Approve Trigger */}
+              {isEditor && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-1.5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/5 hover:text-emerald-700"
+                  onClick={() => setShowManualApproveConfirm(true)}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Godkänn fas manuellt
+                </Button>
+              )}
+
               {/* Toggle History Trigger */}
               {historyReviews.length > 0 && (
                 <Button
@@ -465,7 +485,43 @@ export function TollgateChecklist({ projectId, phase, isEditor = true }: Tollgat
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
+          {showManualApproveConfirm && (
+            <div className="p-4 rounded-xl border border-emerald-100 dark:border-emerald-950/30 bg-emerald-50/20 dark:bg-emerald-950/10 text-sm space-y-3 animate-in fade-in-50 duration-200">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-semibold text-emerald-800 dark:text-emerald-300">
+                    Bekräfta manuellt godkännande av tollgate
+                  </div>
+                  <p className="text-emerald-700/80 dark:text-emerald-400/80 text-xs leading-relaxed">
+                    Genom att godkänna denna fas manuellt flyttar du omedelbart fram projektet till nästa DMAIC-fas utan att behöva uppnå godkänt betyg från AI:ns tollgate-granskning. De bockade punkterna sparas.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end pt-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  onClick={() => setShowManualApproveConfirm(false)}
+                >
+                  Avbryt
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                  onClick={async () => {
+                    await handleApprovePhase();
+                    setShowManualApproveConfirm(false);
+                  }}
+                >
+                  Ja, godkänn fasen
+                </Button>
+              </div>
+            </div>
+          )}
+
           {items.map((item) => (
             <div
               key={item.id}

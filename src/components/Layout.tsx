@@ -206,11 +206,24 @@ export function Layout({ children }: LayoutProps) {
       {/* Mobile Phase Navigation */}
       <div className="md:hidden sticky top-16 z-40 glass border-b overflow-x-auto">
         <div className="flex items-center gap-1.5 px-4 py-2">
+          {user && (
+            <Link
+              to="/dashboard"
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                location.pathname === "/dashboard"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              📊 Dashboard
+            </Link>
+          )}
           <Link
             to="/projects"
             className={cn(
               "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-              location.pathname.startsWith("/project")
+              location.pathname.startsWith("/project") && location.pathname !== "/projects"
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground"
             )}

@@ -25,6 +25,22 @@ interface Project {
   user_id: string;
 }
 
+function parseSafeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return val;
+  if (typeof val === "string") return new Date(val);
+  if (typeof val === "number") return new Date(val);
+  if (typeof val === "object") {
+    if (typeof val.toDate === "function") {
+      return val.toDate();
+    }
+    if (val.seconds !== undefined) {
+      return new Date(val.seconds * 1000);
+    }
+  }
+  return new Date(val);
+}
+
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +92,8 @@ export default function Projects() {
         name: newProjectName.trim(),
         description: newProjectDescription.trim() || null,
         user_id: user!.id,
+        current_phase: 1,
+        status: "active",
         estimated_savings: newProjectSavings ? Number(newProjectSavings) : null
       })
       .select()
@@ -207,7 +225,8 @@ export default function Projects() {
             ) : (
               <div className="grid gap-4">
                 {projects.map((project) => {
-                  const phase = getPhaseInfo(project.current_phase);
+                  const phaseVal = Number(project.current_phase) || 1;
+                  const phase = getPhaseInfo(phaseVal);
                   return (
                     <Link to={`/project/${project.id}`} key={project.id}>
                       <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -249,7 +268,7 @@ export default function Projects() {
                               <div>
                                 <div className="text-sm font-medium">Fas {phase.id}: {phase.name}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  Uppdaterad {new Date(project.updated_at).toLocaleDateString("sv-SE")}
+                                  Uppdaterad {parseSafeDate(project.updated_at).toLocaleDateString("sv-SE")}
                                 </div>
                               </div>
                             </div>
@@ -258,7 +277,7 @@ export default function Projects() {
                                 <div
                                   key={p.id}
                                   className={`h-2 w-6 rounded-full ${
-                                    p.id <= project.current_phase
+                                    p.id <= phaseVal
                                       ? "bg-primary"
                                       : "bg-muted"
                                   }`}
