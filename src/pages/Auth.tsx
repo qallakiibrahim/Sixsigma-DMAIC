@@ -49,13 +49,31 @@ export default function Auth() {
     setIsLoading(false);
 
     if (error) {
+      console.error("Sign in failed:", error);
       let message = "Inloggning misslyckades";
-      if (error.message.includes("Invalid login credentials")) {
+      let description = error.message || "Ett okänt fel uppstod.";
+      
+      const errMsg = error.message || "";
+      const errCode = (error as any).code || "";
+      
+      if (errCode === "auth/invalid-credential" || errCode === "auth/user-not-found" || errCode === "auth/wrong-password" || errMsg.includes("invalid-credential")) {
         message = "Fel e-post eller lösenord";
-      } else if (error.message.includes("Email not confirmed")) {
-        message = "Bekräfta din e-post först";
+        description = "Kontrollera att du har angett rätt uppgifter eller registrera ett nytt konto.";
+      } else if (errCode === "auth/operation-not-allowed" || errMsg.includes("operation-not-allowed")) {
+        message = "Metoden är inte aktiverad";
+        description = "Inloggning med e-post och lösenord är inte aktiverat i din Firebase Console. Gå till Authentication -> Sign-in method och aktivera 'Email/Password'.";
+        setShowHelp(true);
+      } else if (errCode === "auth/unauthorized-domain" || errMsg.includes("unauthorized-domain")) {
+        message = "Obehörig domän";
+        description = `Denna domän (${window.location.hostname}) är inte godkänd i din Firebase Console under Authorized Domains.`;
+        setShowHelp(true);
       }
-      toast({ title: message, variant: "destructive" });
+      
+      toast({ 
+        title: message, 
+        description: description, 
+        variant: "destructive" 
+      });
     } else {
       toast({ title: "Inloggad!" });
       navigate("/projects");
@@ -78,16 +96,36 @@ export default function Auth() {
     setIsLoading(false);
 
     if (error) {
+      console.error("Sign up failed:", error);
       let message = "Registrering misslyckades";
-      if (error.message.includes("already registered")) {
+      let description = error.message || "Ett okänt fel uppstod.";
+      
+      const errMsg = error.message || "";
+      const errCode = (error as any).code || "";
+      
+      if (errCode === "auth/email-already-in-use" || errMsg.includes("already-in-use") || errMsg.includes("already registered")) {
         message = "E-postadressen används redan";
+        description = "Det finns redan ett konto registrerat med denna e-postadress. Prova att logga in istället.";
+      } else if (errCode === "auth/operation-not-allowed" || errMsg.includes("operation-not-allowed")) {
+        message = "Registrering blockerad";
+        description = "E-post och lösenord är inte aktiverat som inloggningsmetod under Authentication -> Sign-in method i din Firebase Console.";
+        setShowHelp(true);
+      } else if (errCode === "auth/weak-password" || errMsg.includes("weak-password")) {
+        message = "För svagt lösenord";
+        description = "Välj ett lösenord som är minst 6 tecken långt.";
       }
-      toast({ title: message, variant: "destructive" });
+      
+      toast({ 
+        title: message, 
+        description: description, 
+        variant: "destructive" 
+      });
     } else {
       toast({ 
         title: "Konto skapat!", 
-        description: "Kontrollera din e-post för att bekräfta kontot" 
+        description: "Ditt konto har skapats och du är nu registrerad." 
       });
+      // The Firebase createUserWithEmailAndPassword SDK auto-signs the user in, so navigate() will trigger via useEffect.
     }
   };
 
@@ -313,6 +351,14 @@ export default function Auth() {
                             <strong className="text-foreground block mb-0.5">Lägg till din domän i Firebase</strong>
                             Firebase blockerar inloggningsförsök från okända domäner. Gå till din Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized domains och lägg till följande domän:
                             <code className="block bg-background/80 p-2 rounded border font-mono select-all text-amber-600 font-semibold mt-2 break-all">{window.location.hostname}</code>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 text-amber-600 font-medium">
+                          <div className="h-5 w-5 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">4</div>
+                          <div>
+                            <strong className="text-foreground block mb-0.5">Alternativ: Registrera med E-post & lösenord</strong>
+                            Om du inte kan lägga till fler domäner i Firebase Console (t.ex. på grund av app-gränser), använd **E-post och lösenord** i fliken "Registrera" ovan! Det kräver **ingen domain-verifiering**. Se bara till att du har aktiverat <span className="font-semibold text-foreground">Email/Password</span> som inloggningsmetod i ditt Firebase-projekt (Authentication &rarr; Sign-in method).
                           </div>
                         </div>
                       </div>
