@@ -521,3 +521,51 @@ export const controlChartConstants = {
   D4: { 2: 3.267, 3: 2.574, 4: 2.282, 5: 2.114, 6: 2.004, 7: 1.924, 8: 1.864, 9: 1.816, 10: 1.777 },
   d2: { 2: 1.128, 3: 1.693, 4: 2.059, 5: 2.326, 6: 2.534, 7: 2.704, 8: 2.847, 9: 2.970, 10: 3.078 },
 };
+
+export const DEFAULT_CHECKLIST: Record<number, string[]> = {
+  1: [
+    "Project Charter godkänd",
+    "Problem- och målformulering definierad",
+    "SIPOC-diagram komplett",
+    "VOC/CTQ identifierade",
+    "Projektomfattning avgränsad",
+    "Intressentanalys genomförd",
+    "Teammedlemmar tilldelade",
+  ],
+  2: [
+    "Datainsamlingsplan upprättad",
+    "MSA/Gage R&R godkänd (<10% R&R)",
+    "Baseline-data insamlad",
+    "Processkapabilitet (Cp/Cpk) beräknad",
+    "Sigma-nivå fastställd",
+    "Processkarta detaljerad",
+    "Mätetal validerade",
+  ],
+  3: [
+    "Rotorsaker identifierade (Fiskben/5 Varför)",
+    "Statistiska tester genomförda",
+    "Kritiska X-faktorer verifierade",
+    "Paretoanalys av defekttyper",
+    "Korrelation/regression analyserad",
+    "FMEA uppdaterad",
+    "Datadrivna slutsatser dokumenterade",
+  ],
+  4: [
+    "Lösningar genererade och utvärderade",
+    "DOE genomförd och analyserad",
+    "Pilottest genomfört",
+    "Förbättring verifierad med data",
+    "Implementeringsplan klar",
+    "Riskanalys för implementation",
+    "Intressenter informerade",
+  ],
+  5: [
+    "Kontrollplan upprättad",
+    "Styrdiagram implementerade",
+    "SOP:ar uppdaterade",
+    "Utbildning genomförd",
+    "Reaktionsplan dokumenterad",
+    "Processägare utsedd",
+    "Projektrapport/A3 färdigställd",
+  ],
+};

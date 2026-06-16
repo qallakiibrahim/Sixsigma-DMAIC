@@ -17,7 +17,7 @@ import { ArrowLeft, Plus, Trash2, Loader2, FileText, Calculator, BarChart3, Save
 import { exportProjectToPDF, exportA3Report } from "@/lib/pdf-export";
 import { exportProjectToPPTX } from "@/lib/pptx-export";
 import { exportProjectToXLSX, exportProjectToCSV } from "@/lib/xlsx-export";
-import { phases } from "@/data/dmaic-tools";
+import { phases, DEFAULT_CHECKLIST } from "@/data/dmaic-tools";
 import { ToolCard } from "@/components/ToolCard";
 import { ProjectCollaborators } from "@/components/ProjectCollaborators";
 import { TollgateChecklist } from "@/components/project/TollgateChecklist";
@@ -258,12 +258,42 @@ export default function ProjectDetail() {
 
   const fetchTollgateItems = useCallback(async () => {
     if (!projectId) return;
-    const { data: tollgateData } = await supabase
+    const { data: tollgateData, error } = await supabase
       .from("tollgate_items")
       .select("phase, title, is_completed")
       .eq("project_id", projectId)
       .order("sort_order");
-    setTollgateItems(tollgateData || []);
+
+    if (!error && tollgateData && tollgateData.length === 0) {
+      // Pre-initialize all 5 DMAIC checklist phases in database to ensure
+      // progress metrics are always computed honestly and correctly.
+      const inserts: any[] = [];
+      Object.entries(DEFAULT_CHECKLIST).forEach(([phaseNum, items]) => {
+        const phase = parseInt(phaseNum, 10);
+        items.forEach((title, i) => {
+          inserts.push({
+            project_id: projectId,
+            phase,
+            title,
+            sort_order: i,
+            is_completed: false
+          });
+        });
+      });
+
+      const { data: insertedData, error: insertError } = await supabase
+        .from("tollgate_items")
+        .insert(inserts)
+        .select("phase, title, is_completed");
+
+      if (!insertError && insertedData) {
+        setTollgateItems(insertedData);
+      } else {
+        setTollgateItems([]);
+      }
+    } else {
+      setTollgateItems(tollgateData || []);
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -610,9 +640,6 @@ export default function ProjectDetail() {
                         )}
                         onClick={() => {
                           setActivePhase(phase.id);
-                          if (phase.id > project.current_phase) {
-                            updatePhase(phase.id);
-                          }
                         }}
                       >
                         {/* Desktop Directional Arrow between phases */}

@@ -20,7 +20,7 @@ import {
   Lock
 } from "lucide-react";
 import { toast } from "sonner";
-import { phases } from "@/data/dmaic-tools";
+import { phases, DEFAULT_CHECKLIST } from "@/data/dmaic-tools";
 import {
   Dialog,
   DialogContent,
@@ -40,54 +40,6 @@ interface TollgateItem {
   completed_at: string | null;
   sort_order: number;
 }
-
-const DEFAULT_CHECKLIST: Record<number, string[]> = {
-  1: [
-    "Project Charter godkänd",
-    "Problem- och målformulering definierad",
-    "SIPOC-diagram komplett",
-    "VOC/CTQ identifierade",
-    "Projektomfattning avgränsad",
-    "Intressentanalys genomförd",
-    "Teammedlemmar tilldelade",
-  ],
-  2: [
-    "Datainsamlingsplan upprättad",
-    "MSA/Gage R&R godkänd (<10% R&R)",
-    "Baseline-data insamlad",
-    "Processkapabilitet (Cp/Cpk) beräknad",
-    "Sigma-nivå fastställd",
-    "Processkarta detaljerad",
-    "Mätetal validerade",
-  ],
-  3: [
-    "Rotorsaker identifierade (Fiskben/5 Varför)",
-    "Statistiska tester genomförda",
-    "Kritiska X-faktorer verifierade",
-    "Paretoanalys av defekttyper",
-    "Korrelation/regression analyserad",
-    "FMEA uppdaterad",
-    "Datadrivna slutsatser dokumenterade",
-  ],
-  4: [
-    "Lösningar genererade och utvärderade",
-    "DOE genomförd och analyserad",
-    "Pilottest genomfört",
-    "Förbättring verifierad med data",
-    "Implementeringsplan klar",
-    "Riskanalys för implementation",
-    "Intressenter informerade",
-  ],
-  5: [
-    "Kontrollplan upprättad",
-    "Styrdiagram implementerade",
-    "SOP:ar uppdaterade",
-    "Utbildning genomförd",
-    "Reaktionsplan dokumenterad",
-    "Processägare utsedd",
-    "Projektrapport/A3 färdigställd",
-  ],
-};
 
 interface TollgateChecklistProps {
   projectId: string;
