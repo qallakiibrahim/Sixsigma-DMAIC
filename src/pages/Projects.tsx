@@ -66,17 +66,33 @@ export default function Projects() {
   }, [user]);
 
   const fetchProjects = async () => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .order("updated_at", { ascending: false });
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("updated_at", { ascending: false });
 
-    if (error) {
-      toast({ title: "Kunde inte hämta projekt", variant: "destructive" });
-    } else {
-      setProjects(data || []);
+      if (error) {
+        console.error("fetchProjects error:", error);
+        toast({ 
+          title: "Kunde inte hämta projekt", 
+          description: error.message || "Kontrollera dina rättigheter eller anslutning.",
+          variant: "destructive" 
+        });
+      } else {
+        setProjects(data || []);
+      }
+    } catch (err: any) {
+      console.error("fetchProjects exception:", err);
+      toast({ 
+        title: "Kunde inte hämta projekt", 
+        description: err.message || "Ett oväntat fel uppstod.",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const createProject = async () => {

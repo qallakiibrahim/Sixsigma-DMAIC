@@ -761,14 +761,26 @@ class FirestoreQueryBuilder {
           return { data: { count }, error: null };
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Firebase error on operation ${this.operation} for table ${this.tableName}:`, err);
       let opType = OperationType.GET;
       if (this.operation === 'insert' || this.operation === 'upsert') opType = OperationType.CREATE;
       else if (this.operation === 'update') opType = OperationType.UPDATE;
       else if (this.operation === 'delete') opType = OperationType.DELETE;
       
-      handleFirestoreError(err, opType, this.tableName);
+      try {
+        handleFirestoreError(err, opType, this.tableName);
+      } catch (mappedErr: any) {
+        let cleanMessage = mappedErr.message;
+        try {
+          const parsed = JSON.parse(mappedErr.message);
+          if (parsed && parsed.error) {
+            cleanMessage = parsed.error;
+          }
+        } catch (_) {}
+        return { data: null, error: { message: cleanMessage } };
+      }
+      return { data: null, error: { message: err?.message || String(err) } };
     }
   }
 
@@ -1017,15 +1029,19 @@ class FirebaseAuth {
       const provider = new GoogleAuthProvider();
       const credential = await signInWithPopup(auth, provider);
       
-      const profileRef = doc(db, "profiles", credential.user.uid);
-      const profileSnap = await getDoc(profileRef);
-      if (!profileSnap.exists()) {
-        await setDoc(profileRef, {
-          user_id: credential.user.uid,
-          display_name: credential.user.displayName || credential.user.email?.split("@")[0] || "Användare",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+      try {
+        const profileRef = doc(db, "profiles", credential.user.uid);
+        const profileSnap = await getDoc(profileRef);
+        if (!profileSnap.exists()) {
+          await setDoc(profileRef, {
+            user_id: credential.user.uid,
+            display_name: credential.user.displayName || credential.user.email?.split("@")[0] || "Användare",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch (profileErr) {
+        console.warn("Non-blocking profile synchronization failed during Google sign-in:", profileErr);
       }
 
       const user = {
