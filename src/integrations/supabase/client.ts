@@ -777,7 +777,9 @@ class FirestoreQueryBuilder {
           if (parsed && parsed.error) {
             cleanMessage = parsed.error;
           }
-        } catch (_) {}
+        } catch (_) {
+          // Fall back to original error message if JSON parsing fails
+        }
         return { data: null, error: { message: cleanMessage } };
       }
       return { data: null, error: { message: err?.message || String(err) } };

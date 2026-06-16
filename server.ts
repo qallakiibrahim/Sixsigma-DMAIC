@@ -615,6 +615,24 @@ async function setupVite() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    // Robust fallback for development to handle client-side router page refreshes elegantly without 404s
+    app.use("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      // Skip API routes so that invalid APIs 404 or resolve normally
+      if (url.startsWith("/api/")) {
+        return next();
+      }
+      try {
+        const fs = await import("fs");
+        let template = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
