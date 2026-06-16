@@ -617,7 +617,7 @@ async function setupVite() {
     app.use(vite.middlewares);
 
     // Robust fallback for development to handle client-side router page refreshes elegantly without 404s
-    app.use("*", async (req, res, next) => {
+    app.use("*all", async (req, res, next) => {
       const url = req.originalUrl;
       // Skip API routes so that invalid APIs 404 or resolve normally
       if (url.startsWith("/api/")) {
@@ -636,7 +636,7 @@ async function setupVite() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("*all", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

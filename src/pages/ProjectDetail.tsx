@@ -10,6 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -505,10 +513,10 @@ export default function ProjectDetail() {
             <ArrowLeft className="h-4 w-4" />
             Tillbaka till projekt
           </Link>
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3 mb-2 flex-wrap">
-                <h1 className="text-3xl font-bold truncate">{project.name}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold break-words leading-tight">{project.name}</h1>
                 {project.user_id === user?.id && (
                   <Button
                     variant="outline"
@@ -522,79 +530,141 @@ export default function ProjectDetail() {
                 )}
               </div>
               {project.description && (
-                <p className="text-white/80">{project.description}</p>
+                <p className="text-white/80 text-sm sm:text-base line-clamp-3 md:line-clamp-none max-w-2xl">{project.description}</p>
               )}
               {/* Savings indicators */}
               <div className="flex items-center gap-4 mt-2">
                 {project.estimated_savings != null && (
-                  <span className="text-white/80 text-sm flex items-center gap-1">
+                  <span className="text-white/80 text-xs sm:text-sm flex items-center gap-1">
                     <DollarSign className="h-3.5 w-3.5" />
                     Uppskattad: {new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(project.estimated_savings)}
                   </span>
                 )}
                 {project.actual_savings != null && (
-                  <span className="text-white text-sm font-medium flex items-center gap-1">
+                  <span className="text-white text-xs sm:text-sm font-medium flex items-center gap-1">
                     <DollarSign className="h-3.5 w-3.5" />
                     Faktisk: {new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(project.actual_savings)}
                   </span>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
+            
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap shrink-0">
               <ProjectCollaborators
                 projectId={project.id}
                 isOwner={project.user_id === user?.id}
                 currentUserId={user?.id || ""}
               />
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/20 border-white/40 text-white hover:bg-white/30"
-                onClick={() => exportProjectToPDF(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows)}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/20 border-white/40 text-white hover:bg-white/30"
-                onClick={() => exportA3Report(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                A3 Rapport
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/20 border-white/40 text-white hover:bg-white/30"
-                onClick={() => exportProjectToPPTX(project, notes, calculations, tollgateItems, sigmaEntries)}
-              >
-                <Presentation className="h-4 w-4 mr-2" />
-                PPTX
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/20 border-white/40 text-white hover:bg-white/30"
-                onClick={() => exportProjectToXLSX(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
-              >
-                <Table className="h-4 w-4 mr-2" />
-                Excel (.xlsx)
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/20 border-white/40 text-white hover:bg-white/30"
-                onClick={() => exportProjectToCSV(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
-                title="Semicolon-separerad CSV perfekt för svenska Excel-installationer samt begränsade IT-miljöer"
-              >
-                <Table className="h-4 w-4 mr-2" />
-                CSV (Svensk Excel / Backup)
-              </Button>
-              <Badge variant="outline" className="bg-white/20 text-white border-white/40">
+              
+              <Badge variant="outline" className="bg-white/20 text-white border-white/40 text-xs py-0.5 px-2">
                 {project.status === "active" ? "Aktiv" : project.status === "completed" ? "Klar" : "Arkiverad"}
               </Badge>
+
+              {/* Mobile/Tablet Compact Export Options - Visible below md */}
+              <div className="block md:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/20 border-white/40 text-white hover:bg-white/30 text-xs"
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      Exportera
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-white border-slate-200 text-slate-800 shadow-md">
+                    <DropdownMenuLabel className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Exportera projekt</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="hover:bg-slate-100 focus:bg-slate-100 gap-2 cursor-pointer text-xs"
+                      onClick={() => exportProjectToPDF(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows)}
+                    >
+                      <Download className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                      PDF-rapport
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="hover:bg-slate-100 focus:bg-slate-100 gap-2 cursor-pointer text-xs"
+                      onClick={() => exportA3Report(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
+                    >
+                      <Download className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                      A3 Rapport
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="hover:bg-slate-100 focus:bg-slate-100 gap-2 cursor-pointer text-xs"
+                      onClick={() => exportProjectToPPTX(project, notes, calculations, tollgateItems, sigmaEntries)}
+                    >
+                      <Presentation className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                      PowerPoint (.pptx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="hover:bg-slate-100 focus:bg-slate-100 gap-2 cursor-pointer text-xs"
+                      onClick={() => exportProjectToXLSX(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
+                    >
+                      <Table className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                      Excel (.xlsx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="hover:bg-slate-100 focus:bg-slate-100 gap-2 cursor-pointer text-xs"
+                      onClick={() => exportProjectToCSV(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
+                      title="Semicolon-separerad CSV perfekt för svenska Excel-installationer samt begränsade IT-miljöer"
+                    >
+                      <Table className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                      CSV (Svensk Excel / Backup)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Desktop Export Buttons - Visible only on md and up */}
+              <div className="hidden md:flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/20 border-white/40 text-white hover:bg-white/30"
+                  onClick={() => exportProjectToPDF(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/20 border-white/40 text-white hover:bg-white/30"
+                  onClick={() => exportA3Report(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  A3 Rapport
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/20 border-white/40 text-white hover:bg-white/30"
+                  onClick={() => exportProjectToPPTX(project, notes, calculations, tollgateItems, sigmaEntries)}
+                >
+                  <Presentation className="h-4 w-4 mr-2" />
+                  PPTX
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/20 border-white/40 text-white hover:bg-white/30"
+                  onClick={() => exportProjectToXLSX(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
+                >
+                  <Table className="h-4 w-4 mr-2" />
+                  Excel (.xlsx)
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/20 border-white/40 text-white hover:bg-white/30"
+                  onClick={() => exportProjectToCSV(project, notes, calculations, tollgateItems, sigmaEntries, controlPlanRows, raciRows)}
+                  title="Semicolon-separerad CSV perfekt för svenska Excel-installationer"
+                >
+                  <Table className="h-4 w-4 mr-2" />
+                  CSV
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -621,7 +691,7 @@ export default function ProjectDetail() {
               {/* Overall and Phase-by-phase Timeline track without overlapping lines */}
               <div className="relative pt-2">
                 {/* Grid of Phases representing timeline checkpoints */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 md:gap-4 relative z-10">
+                <div className="grid grid-cols-5 gap-1 sm:gap-4 relative z-10">
                   {phases.map((phase, index) => {
                     const pct = getPhaseProgress(phase.id);
                     const isActive = phase.id === activePhase;
@@ -633,7 +703,7 @@ export default function ProjectDetail() {
                       <div 
                         key={phase.id} 
                         className={cn(
-                          "flex flex-col items-center p-3 rounded-xl transition-all duration-200 cursor-pointer relative",
+                          "flex flex-col items-center p-1 sm:p-3 rounded-xl transition-all duration-200 cursor-pointer relative",
                           isActive 
                             ? "bg-white/15 border border-white/25 shadow-lg" 
                             : "border border-transparent hover:bg-white/5"
@@ -644,30 +714,30 @@ export default function ProjectDetail() {
                       >
                         {/* Desktop Directional Arrow between phases */}
                         {index < phases.length - 1 && (
-                          <div className="absolute right-0 translate-x-[50%] top-[36px] translate-y-[-50%] hidden md:flex items-center justify-center text-white/45 z-30 pointer-events-none">
+                          <div className="absolute right-0 translate-x-[50%] top-[28px] sm:top-[36px] translate-y-[-50%] hidden md:flex items-center justify-center text-white/45 z-30 pointer-events-none">
                             <ChevronRight className="w-4 h-4" />
                           </div>
                         )}
                         {/* Circle indicator node with icon */}
                         <div className={cn(
-                          "w-12 h-12 rounded-full flex items-center justify-center transition-all border-2 relative z-20",
+                          "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all border-2 relative z-20",
                           isActive
-                            ? "bg-white text-slate-900 border-white scale-110 shadow-lg ring-4 ring-white/20 font-bold"
+                            ? "bg-white text-slate-900 border-white scale-105 sm:scale-110 shadow-lg ring-4 ring-white/20 font-bold"
                             : isPast
                             ? "bg-emerald-500/90 text-white border-emerald-400 font-bold"
                             : isCurrentPhase
-                            ? "bg-white/25 text-white border-white scale-105 animate-pulse"
+                            ? "bg-white/25 text-white border-white scale-102 sm:scale-105 animate-pulse"
                             : "bg-black/20 text-white/40 border-transparent"
                         )}>
                           {pct === 100 ? (
-                            <span className="text-base font-bold">✓</span>
+                            <span className="text-xs sm:text-base font-bold">✓</span>
                           ) : (
-                            <span className="text-base">{phase.icon}</span>
+                            <span className="text-sm sm:text-base">{phase.icon}</span>
                           )}
                           
                           {/* Status Checkmark or Badge for completion inside or on top of node */}
                           <div className={cn(
-                            "absolute -bottom-2.5 right-1/2 translate-x-1/2 text-[9px] px-1.5 py-0.2 rounded-full font-bold shadow-sm border whitespace-nowrap",
+                            "absolute -bottom-2 sm:-bottom-2.5 right-1/2 translate-x-1/2 text-[8px] sm:text-[9px] px-1 sm:px-1.5 py-0.2 rounded-full font-bold shadow-sm border whitespace-nowrap",
                             pct === 100
                               ? "bg-emerald-500 text-white border-emerald-400"
                               : "bg-white/95 text-slate-950 border-white/30"
@@ -678,17 +748,17 @@ export default function ProjectDetail() {
 
                         {/* Phase Labels */}
                         <span className={cn(
-                          "text-xs mt-4 font-bold tracking-wide",
+                          "text-[10px] sm:text-xs mt-3 sm:mt-4 font-bold tracking-wide text-center truncate w-full px-0.5",
                           isActive ? "text-white" : "text-white/80"
                         )}>
                           {phase.name}
                         </span>
                         
                         {/* Smaller visual indicator under name to show completion status */}
-                        <div className="w-full max-w-[80px] mt-2">
+                        <div className="w-full max-w-[40px] sm:max-w-[80px] mt-1.5 sm:mt-2">
                           <Progress 
                             value={pct} 
-                            className="h-1 bg-white/20 [&>div]:bg-emerald-400" 
+                            className="h-0.5 sm:h-1 bg-white/20 [&>div]:bg-emerald-400" 
                           />
                         </div>
                       </div>

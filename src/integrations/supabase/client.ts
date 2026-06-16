@@ -590,12 +590,6 @@ class FirestoreQueryBuilder {
             return { data: this.isSingle ? null : [], error: null };
           }
         }
-        if (this.orderField) {
-          qConstraints.push(orderBy(this.orderField, this.orderAscending ? 'asc' : 'desc'));
-        }
-        if (this.limitValue !== null) {
-          qConstraints.push(limit(this.limitValue));
-        }
 
         const q = query(colRef, ...qConstraints);
         const snap = await getDocs(q);
@@ -626,21 +620,41 @@ class FirestoreQueryBuilder {
             const clonedDocs: any[] = [];
             
             for (let i = 0; i < templateItems.length; i++) {
-              const item = templateItems[i];
-              const docId = `${this.tableName}-seeded-${projectId.substring(0, 8)}-${i}`;
-              const docRef = doc(db, this.tableName, docId);
-              const payload = {
-                ...item,
-                id: docId,
-                project_id: projectId,
-                user_id: userId,
-                created_at: new Date(Date.now() - (templateItems.length - i) * 3600 * 1000).toISOString()
-              };
-              await setDoc(docRef, payload);
-              clonedDocs.push(payload);
+               const item = templateItems[i];
+               const docId = `${this.tableName}-seeded-${projectId.substring(0, 8)}-${i}`;
+               const docRef = doc(db, this.tableName, docId);
+               const payload = {
+                 ...item,
+                 id: docId,
+                 project_id: projectId,
+                 user_id: userId,
+                 created_at: new Date(Date.now() - (templateItems.length - i) * 3600 * 1000).toISOString()
+               };
+               await setDoc(docRef, payload);
+               clonedDocs.push(payload);
             }
             docs = clonedDocs;
           }
+        }
+
+        // Apply in-memory sorting to prevent composite index requirement errors
+        if (this.orderField) {
+          const field = this.orderField;
+          const asc = this.orderAscending;
+          docs.sort((a: any, b: any) => {
+            const valA = a[field];
+            const valB = b[field];
+            if (valA == null) return 1;
+            if (valB == null) return -1;
+            if (valA < valB) return asc ? -1 : 1;
+            if (valA > valB) return asc ? 1 : -1;
+            return 0;
+          });
+        }
+
+        // Apply in-memory limit
+        if (this.limitValue !== null) {
+          docs = docs.slice(0, this.limitValue);
         }
 
         return { data: this.isSingle ? (docs[0] || null) : docs, error: null };
