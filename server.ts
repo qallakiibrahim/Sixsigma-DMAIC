@@ -636,7 +636,13 @@ async function setupVite() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("/:catchAll*", (req, res) => {
+    
+    // Robust fallback for production to handle client-side router page refreshes elegantly without 404s or path-to-regexp errors
+    app.use((req, res, next) => {
+      const url = req.originalUrl || req.url;
+      if (req.method !== "GET" || url.startsWith("/api/")) {
+        return next();
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
