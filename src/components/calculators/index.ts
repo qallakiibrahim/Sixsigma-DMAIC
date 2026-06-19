@@ -13,3 +13,6 @@ export { ANOVACalculator } from "./ANOVACalculator";
 export { ChiSquareCalculator } from "./ChiSquareCalculator";
 export { NormalityTestCalculator } from "./NormalityTestCalculator";
 export { CapabilitySixpack } from "./CapabilitySixpack";
+export { RolledThroughputYieldCalculator } from "./RolledThroughputYieldCalculator";
+export { OEECalculator } from "./OEECalculator";
+export { LeanTaktTimeCalculator } from "./LeanTaktTimeCalculator";
