@@ -314,7 +314,7 @@ export default function Calculators() {
             
             {/* Header section with deep design styling */}
             <div className="bg-background border border-primary/5 rounded-2xl p-8 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
-              <div className="absolute right-0 top-0 h-40 w-40 bg-primary/2.5 rounded-full blur-3xl" />
+              <div className="absolute right-0 top-0 h-40 w-40 bg-primary/2.5 rounded-full blur-3xl pointer-events-none" />
               <div className="space-y-1.5 max-w-2xl">
                 <div className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
                   <Award className="h-3.5 w-3.5" /> Metodikverktyg & Statistik

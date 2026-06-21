@@ -71,6 +71,7 @@ export default function VSM() {
   const [customerDemand, setCustomerDemand] = useState<string>("120");
   const [shiftHours, setShiftHours] = useState<string>("8");
   const [steps, setSteps] = useState<VsmProcessStep[]>(TEMPLATES.manufacturing.steps);
+  const [showHelp, setShowHelp] = useState(false);
 
   // New step creation state
   const [newStepName, setNewStepName] = useState("");
@@ -203,7 +204,7 @@ export default function VSM() {
             
             {/* VSM Header */}
             <div className="bg-background border border-primary/5 rounded-2xl p-8 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
-              <div className="absolute right-0 top-0 h-40 w-40 bg-primary/2.5 rounded-full blur-3xl" />
+              <div className="absolute right-0 top-0 h-40 w-40 bg-primary/2.5 rounded-full blur-3xl pointer-events-none" />
               <div className="space-y-1.5 max-w-3xl">
                 <div className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
                   <Workflow className="h-3.5 w-3.5" /> Lean Metodik
@@ -213,10 +214,96 @@ export default function VSM() {
                   Kartlägg informations- och materialflöden i din verksamhet. VSM identifierar flaskhalsar, överproduktion och slöseri genom att visualisera värdeskapande processtid (VA) i relation till icke-värdeskapande ledtid (NVA).
                 </p>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full md:w-auto">
+                <Button
+                  variant={showHelp ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowHelp(!showHelp)}
+                  className="flex items-center gap-2 text-xs font-semibold cursor-pointer py-2 px-3 shrink-0"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  {showHelp ? "Dölj guide" : "Förklara VSM & uträkningar"}
+                </Button>
                 <CalculatorLoadButton savedCalculation={savedCalculation} isLoading={isLoadingSaved} onLoad={handleLoad} />
               </div>
             </div>
+
+            {/* VSM Help Guide Panel */}
+            {showHelp && (
+              <Card className="border border-primary/10 bg-primary/2 rounded-2xl overflow-hidden shadow-sm animate-in fade-in duration-200">
+                <CardHeader className="border-b border-primary/5 bg-background/50 py-4 px-6 border-b border-primary/5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
+                    <HelpCircle className="h-4 w-4 text-primary animate-pulse" />
+                    Metodstöd: Hur du tolkar Värdeflödesanalysen (VSM)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 text-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-bold text-xs text-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-primary" /> Vad är VSM?
+                      </h4>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Värdeflödesanalys (Value Stream Mapping) är en hörnsten inom <strong>Lean</strong>. Den ritar upp hela resan för en produkt eller tjänst och mäter exakt hur mycket tid som skapar värde för kunden jämfört med tiden som går åt till väntan och lagerhållning.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-primary" /> Begrepp i flödet
+                      </h4>
+                      <ul className="space-y-1.5 text-xs text-muted-foreground">
+                        <li><strong>C/T (Cycle Time / Cykeltid):</strong> Den tid en operatör eller maskin faktiskt arbetar med en enskild detalj.</li>
+                        <li><strong>C/O (Changeover / Ställtid):</strong> Tiden det tar att ställa om processen från att köra en produkt/typ till en annan.</li>
+                        <li><strong>Uptime (Tillgänglighet):</strong> Hur pålitlig utrustningen är i procent. 100% innebär helt störningsfri gång.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-bold text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500" /> Flaskhalsar &amp; Mellanlager (NVA)
+                      </h4>
+                      <p className="text-muted-foreground text-xs leading-relaxed mb-2">
+                        <strong>Mellanlager (∆)</strong> representerar produkter i kö. De kallas <strong>Non-Value Added (NVA)</strong> eftersom de binder kapital och förlänger ledtiden utan att höja produktens värde.
+                      </p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Varje block med en cykeltid som överstiger <strong>kundtakten</strong> markeras automatiskt som en <strong>Flaskhals</strong>. Det är här flödet begränsas först!
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-primary" /> Formler &amp; Little&apos;s Lag
+                      </h4>
+                      <div className="font-mono text-[11px] bg-background border rounded px-3 py-2 text-muted-foreground leading-relaxed">
+                        • Lagerledtid = Lager / Efterfrågan (dygn)<br />
+                        • Kundtakt = Arbetstid per dag / Enheter per dag<br />
+                        • PCE (Flödeseffektivitet) = VA-tid / Total Ledtid
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 bg-background/40 p-5 rounded-xl border border-primary/5 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <h4 className="font-bold text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" /> PCE (Process Cycle Efficiency)
+                      </h4>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Visar i % hur mycket av den totala tiden i flödet som är värdeskapande. 
+                      </p>
+                      <ul className="space-y-1 text-[11px] text-muted-foreground pl-1.5">
+                        <li className="flex items-center gap-1.5"><strong className="text-rose-500">&lt; 5%</strong> - Mycket slöseri (ledtiden styrs av lager).</li>
+                        <li className="flex items-center gap-1.5"><strong className="text-amber-500">5-15%</strong> - Standard industriellt utflöde.</li>
+                        <li className="flex items-center gap-1.5"><strong className="text-emerald-500">&gt; 15%</strong> - Lean i världsklass (minimal väntetid).</li>
+                      </ul>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground italic leading-normal border-t pt-2.5 mt-2">
+                      💡 Sänk ledtiden radikalt genom att angripa lager och köer mellan stegen, snarare än att tvinga operatörer att springa snabbare!
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Template Selector & Customer Core Params */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
